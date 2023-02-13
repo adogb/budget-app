@@ -1,3 +1,6 @@
+# sensitive info to access Nordigen API
+config.py
+
 # setup file with the requests to get/refresh access token and to do once in while only
 setup.py
 
