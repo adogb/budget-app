@@ -46,6 +46,9 @@ cur.execute("DROP TABLE IF EXISTS Transactions")
 cur.execute("CREATE TABLE Transactions (trans_id TEXT PRIMARY KEY, booking_date TEXT, desc TEXT, desc_original TEXT, amount REAL, currency TEXT, type TEXT) WITHOUT ROWID") # in reality, flexible typing from SQLite does not require specifying data types
 cur.executemany("INSERT INTO Transactions VALUES(" + "?,"*(len(df.columns)-1) + "?)", df.to_numpy())
 con.commit()
+
+cur.execute("CREATE TABLE Categories (cat_id INTEGER PRIMARY KEY, level INTEGER NOT NULL, parent_id INTEGER, name TEXT NOT NULL, desc TEXT, FOREIGN KEY(parent_id) REFERENCES Categories(cat_id))")
+cur.execute("CREATE TABLE Keywords (keyword TEXT NOT NULL, category INTEGER, FOREIGN KEY(category) REFERENCES Categories(cat_id))")
 # SQLite uses ? as placeholder. Don't use string formatting to avoid SQL injection. df.to_numpy() gives a list of rows (themselves a list of values)
 con.close()
 
