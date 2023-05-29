@@ -1,5 +1,6 @@
 __pycache__
 *.sqlite3
+*.xlsx
 
 # sensitive info to access Nordigen API
 config.py
