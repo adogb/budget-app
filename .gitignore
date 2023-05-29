@@ -4,8 +4,8 @@ __pycache__
 # sensitive info to access Nordigen API
 config.py
 
-# setup file with the requests to get/refresh access token and to do once in while only
-setup.py
+# setup files
+*setup.py
 
 # VS code folder 
 .vscode
