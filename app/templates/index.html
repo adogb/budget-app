@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audrey's Money</title>
+</head>
+<body>
+  <button>Accounts</button>
+  <div id="balance"></div>
+  <div id="graph"></div>
+  <div id="transaction-list">
+    {% for transaction in transactions_df.itertuples(index=False) %}
+    <div class="transaction">
+      <div class="transaction-date">{{ transaction.booking_date }}</div>
+      <div class="transaction-amount">{{ transaction.amount }}</div>
+      <div class="transaction-description">{{ transaction.desc }}</div>
+    </div>
+    {% endfor %}
+    <div class="transaction"></div>
+  </div>
+</body>
+</html>
