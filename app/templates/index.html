@@ -11,12 +11,16 @@
   <div id="balance"></div>
   <div id="graph"></div>
   <div id="transaction-list">
-    {% for transaction in transactions_df.itertuples(index=False) %}
+    {% for month in transactions_df.sort_values(by="booking_date", ascending=False).month.unique() %}
+    <h1>{{ month }}</h1>
+    {% set transactions_df_month = transactions_df[transactions_df.month == month] %}
+    {% for transaction in transactions_df_month.itertuples(index=False) %}
     <div class="transaction">
       <div class="transaction-date">{{ transaction.booking_date }}</div>
       <div class="transaction-amount">{{ transaction.amount }}</div>
       <div class="transaction-description">{{ transaction.desc }}</div>
     </div>
+    {% endfor %}
     {% endfor %}
     <div class="transaction"></div>
   </div>
