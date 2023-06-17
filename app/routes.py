@@ -11,6 +11,10 @@ def index():
     transactions_df = pd.read_sql_query("SELECT * FROM Transactions", con)
     con.close()
 
+    # change type of booking_date to datetime and sort by it descending
+    transactions_df.booking_date = pd.to_datetime(transactions_df.booking_date)
+    transactions_df.sort_values(by="booking_date", ascending=False, inplace=True)
+
     # extract the transaction' month in a new column using datetime
     transactions_df["month"] = pd.to_datetime(transactions_df.booking_date).dt.strftime("%B %Y")
 
