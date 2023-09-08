@@ -1,4 +1,4 @@
-from app import app # second app is the variable defined in app\__init__.py
+from webapp import app #  variable app
 import sqlite3
 from flask import render_template
 import pandas as pd
