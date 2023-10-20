@@ -7,8 +7,21 @@ import pandas as pd
 def index():
     # retrieve categories from database
     con = sqlite3.connect("data.sqlite3")
-    categories_df = pd.read_sql_query("SELECT * FROM Categories", con)
-    transactions_df = pd.read_sql_query("SELECT * FROM Transactions", con)
+    transactions_table_query = """
+        SELECT 
+            Transactions.booking_date as booking_date,
+            Transactions.desc as desc,
+            Transactions.amount as amount,
+            Transactions.currency as currency,
+            Categories.name as category
+        FROM
+            Transactions
+        LEFT JOIN
+            Categories
+        ON
+            Transactions.category = Categories.cat_id
+    """
+    transactions_df = pd.read_sql_query(transactions_table_query, con)
     con.close()
 
     # change type of booking_date to datetime and sort by it descending
@@ -19,4 +32,4 @@ def index():
     transactions_df["month"] = pd.to_datetime(transactions_df.booking_date).dt.strftime("%B %Y")
 
     # render html
-    return render_template("index.html", categories_df=categories_df, transactions_df=transactions_df)
+    return render_template("index.html", transactions_df=transactions_df)
