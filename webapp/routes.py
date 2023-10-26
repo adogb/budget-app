@@ -14,7 +14,8 @@ def index():
             Transactions.desc as desc,
             Transactions.amount as amount,
             Transactions.currency as currency,
-            Categories.name as category
+            Categories.name as category,
+            Categories.type as type
         FROM
             Transactions
         LEFT JOIN
@@ -30,21 +31,18 @@ def index():
     transactions_df.sort_values(by="booking_date", ascending=False, inplace=True)
 
     # extract the transaction' month in a new column using datetime
-    transactions_df["month"] = pd.to_datetime(transactions_df.booking_date, format="%B %Y")
+    transactions_df["month"] = transactions_df["booking_date"].dt.strftime('%B %Y')
 
-    # create dataframe for bar chart
-    expenses_df = transactions_df[transactions_df['category'] != 'Salary']
-    incomes_df = transactions_df[transactions_df['category'] == 'Salary']
+    summary_df = transactions_df.groupby(by=["month", "type"])["amount"].sum().reset_index()
+    summary_df = summary_df.fillna(0)
 
-    expenses_grouped = expenses_df.groupby(by=transactions_df['month'].dt.strftime('%B %Y'))['amount'].sum().reset_index()
-    incomes_grouped = incomes_df.groupby(by=transactions_df['month'].dt.strftime('%B %Y'))['amount'].sum().reset_index()
-
-    # Merge the two DataFrames on the 'Date' column to create a summary DataFrame
-    summary_df = expenses_grouped.merge(incomes_grouped, on='month', how='outer')
-    summary_df.columns = ['month', 'expenses', 'incomes']
+    # Sort the summary DataFrame by date
+    summary_df["month"] = pd.to_datetime(summary_df["month"], format="%B %Y")
+    summary_df = summary_df.sort_values("month", ascending=False)
+    summary_df["month"] = summary_df["month"].dt.strftime('%B %Y')
 
     # create bar chart of monthly expenses and incomes
-    fig = px.bar(summary_df, x="month", y="expenses")
+    fig = px.bar(summary_df, x="month", y="amount", color="type", barmode="group")
     graph_html = fig.to_html(include_plotlyjs='cdn')
 
     # render html
