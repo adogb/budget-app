@@ -13,6 +13,6 @@ with my lifestyle.
 
 ## How?
 I intend to write the app in Python and Flask, and retrieve banking transactions
-via the Nordigen API. I'll be learning Flask and increase my knowledge of how to 
-use APIs with Python.
+via the Nordigen API. For graphs, I am using the plotly.py library. For CSS, I 
+am using the Bootstrap framework.
 
