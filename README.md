@@ -1,5 +1,5 @@
 # Budget Web App
-Work in progres...
+Work in progress...
 
 ## What?
 Web app which shows transactions on chosen bank accounts and presents insights
