@@ -38,7 +38,7 @@ def index():
 
     # Sort the summary DataFrame by date
     summary_df["month"] = pd.to_datetime(summary_df["month"], format="%B %Y")
-    summary_df = summary_df.sort_values("month", ascending=False)
+    summary_df = summary_df.sort_values("month", ascending=True)
     summary_df["month"] = summary_df["month"].dt.strftime('%B %Y')
 
     # create bar chart of monthly expenses and incomes
