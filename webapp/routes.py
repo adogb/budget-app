@@ -41,6 +41,9 @@ def index():
     summary_df = summary_df.sort_values("month", ascending=True)
     summary_df["month"] = summary_df["month"].dt.strftime('%B %Y')
 
+    # show sums in absolute value
+    summary_df["amount"] = summary_df["amount"].abs()
+
     # create bar chart of monthly expenses and incomes
     fig = px.bar(summary_df, x="month", y="amount", color="type", barmode="group")
     graph_html = fig.to_html(include_plotlyjs='cdn')
