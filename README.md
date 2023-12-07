@@ -1,7 +1,7 @@
 # Budget Web App
 Work in progress...
 
-![Work in progess](./assets/images/20231207_overview.png)
+![Work in progess](./assets/images/20231207_overview.PNG)
 
 ## What?
 Web app which shows transactions on chosen bank accounts and presents insights
