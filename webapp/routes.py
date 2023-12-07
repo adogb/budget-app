@@ -8,6 +8,7 @@ import plotly.express as px
 @app.route('/overview')
 def index():
     # retrieve categories from database
+    # ParentCategories is used as an alias for Categories to avoid confusion in the second left join
     con = sqlite3.connect("data.sqlite3")
     transactions_table_query = """
         SELECT 
@@ -16,6 +17,7 @@ def index():
             Transactions.amount as amount,
             Transactions.currency as currency,
             Categories.name as category,
+            ParentCategories.name as parent_category,
             Categories.type as type
         FROM
             Transactions
@@ -23,6 +25,10 @@ def index():
             Categories
         ON
             Transactions.category = Categories.cat_id
+        LEFT JOIN
+            Categories as ParentCategories
+        ON
+            Categories.parent_id = ParentCategories.cat_id
     """
     transactions_df = pd.read_sql_query(transactions_table_query, con)
     con.close()
@@ -50,12 +56,12 @@ def index():
     transactions_chart_html = transactions_fig.to_html(include_plotlyjs='cdn')
 
     # create pie chart of expenses by category
-    categories_df = transactions_df[transactions_df["type"] == "Expense"].groupby(by=["category"])["amount"].sum().reset_index()
+    categories_df = transactions_df[transactions_df["type"] == "Expense"].groupby(by=["parent_category"])["amount"].sum().reset_index()
     # keep negative values only and in absolute value
     categories_df = categories_df[categories_df["amount"] < 0]
     categories_df["amount"] = categories_df["amount"].abs()
     # create chart
-    categories_fig = px.pie(categories_df, values="amount", names="category")
+    categories_fig = px.pie(categories_df, values="amount", names="parent_category")
     categories_chart_html = categories_fig.to_html(include_plotlyjs='cdn')
 
     # render html
