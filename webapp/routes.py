@@ -50,3 +50,32 @@ def index():
 
     # render html
     return render_template("index.html", transactions_df=transactions_df, graph=graph_html)
+
+@app.route('/transactions')
+def transactions():
+    # retrieve categories from database
+    con = sqlite3.connect("data.sqlite3")
+    transactions_table_query = """
+        SELECT 
+            Transactions.booking_date as booking_date,
+            Transactions.desc as desc,
+            Transactions.amount as amount,
+            Transactions.currency as currency,
+            Categories.name as category,
+            Categories.type as type
+        FROM
+            Transactions
+        LEFT JOIN
+            Categories
+        ON
+            Transactions.category = Categories.cat_id
+    """
+    transactions_df = pd.read_sql_query(transactions_table_query, con)
+    con.close()
+
+    # change type of booking_date to datetime and sort by it descending
+    transactions_df.booking_date = pd.to_datetime(transactions_df.booking_date)
+    transactions_df.sort_values(by="booking_date", ascending=False, inplace=True)
+
+    # render html
+    return render_template("transactions.html", transactions_df=transactions_df)
