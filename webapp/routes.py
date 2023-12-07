@@ -50,7 +50,7 @@ def index():
     graph_html = fig.to_html(include_plotlyjs='cdn')
 
     # render html
-    return render_template("index.html", transactions_df=transactions_df, graph=graph_html)
+    return render_template("overview.html", transactions_df=transactions_df, graph=graph_html)
 
 @app.route('/transactions')
 def transactions():
