@@ -5,6 +5,7 @@ import pandas as pd
 import plotly.express as px
 
 @app.route('/')
+@app.route('/overview')
 def index():
     # retrieve categories from database
     con = sqlite3.connect("data.sqlite3")
