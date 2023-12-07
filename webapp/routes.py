@@ -46,11 +46,22 @@ def index():
     summary_df["amount"] = summary_df["amount"].abs()
 
     # create bar chart of monthly expenses and incomes
-    fig = px.bar(summary_df, x="month", y="amount", color="type", barmode="group")
-    graph_html = fig.to_html(include_plotlyjs='cdn')
+    transactions_fig = px.bar(summary_df, x="month", y="amount", color="type", barmode="group")
+    transactions_chart_html = transactions_fig.to_html(include_plotlyjs='cdn')
+
+    # create pie chart of expenses by category
+    categories_df = transactions_df[transactions_df["type"] == "Expense"].groupby(by=["category"])["amount"].sum().reset_index()
+    # keep negative values only and in absolute value
+    categories_df = categories_df[categories_df["amount"] < 0]
+    categories_df["amount"] = categories_df["amount"].abs()
+    # create chart
+    categories_fig = px.pie(categories_df, values="amount", names="category")
+    categories_chart_html = categories_fig.to_html(include_plotlyjs='cdn')
 
     # render html
-    return render_template("overview.html", transactions_df=transactions_df, graph=graph_html)
+    return render_template("overview.html", transactions_df=transactions_df, 
+                           transactions_chart=transactions_chart_html, 
+                           categories_chart=categories_chart_html)
 
 @app.route('/transactions')
 def transactions():
