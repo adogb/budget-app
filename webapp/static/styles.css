@@ -9,5 +9,5 @@
 }
 
 .main-content {
-    margin-left: 230px;
+    padding-left: 230px; /* Same as the width of the sidenav */
 }

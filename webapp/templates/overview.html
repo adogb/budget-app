@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <div class="container main-content">
+  <div class="container-fluid main-content">
     <div class="row">
-      <div class="col-8">
+      <div class="col-12 col-xl-8">
         <div id="balance"></div>
         <div id="transactions-chart">{{ transactions_chart|safe }}</div>
         <div id="categories-chart">{{categories_chart|safe}}</div>
       </div>
-      <div class="col-4">
+      <div class="col-12 col-xl-4">
         <div class="card">
           <div class="card-header">
             <h5 class="card-title">Latest transactions</h5>
