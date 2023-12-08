@@ -11,3 +11,7 @@
 .main-content {
     padding-left: 230px; /* Same as the width of the sidenav */
 }
+
+table {
+    font-size: 0.8rem;
+}
