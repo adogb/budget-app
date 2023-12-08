@@ -8,7 +8,25 @@
         <div id="transactions-chart">{{ transactions_chart|safe }}</div>
         <div id="categories-chart">{{categories_chart|safe}}</div>
       </div>
-      <div class="col-4"></div>
+      <div class="col-4">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title">Latest transactions</h5>
+          </div>
+          <div class="card-body">
+            <table class="table">
+              <tbody>
+                {% for transaction in transactions_df.head(10).itertuples(index=False) %}
+                  <tr>
+                    <td>{{ transaction.booking_date.strftime("%d-%m-%Y") }}</td>
+                    <td>{{ transaction.desc }}</td>
+                    <td>{{ transaction.amount }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+      </div>
     </div>
   </div>
 {% endblock %}
