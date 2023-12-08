@@ -20,7 +20,7 @@
                   <tr>
                     <td>{{ transaction.booking_date.strftime("%d-%m-%Y") }}</td>
                     <td>{{ transaction.desc }}</td>
-                    <td>{{ transaction.amount }}</td>
+                    <td>{{ transaction.amount ~ " " ~ transaction.currency }}</td>
                   </tr>
                 {% endfor %}
               </tbody>
