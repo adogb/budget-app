@@ -5,8 +5,22 @@
     <div class="row">
       <div class="col-12 col-xl-8">
         <div id="balance"></div>
-        <div id="transactions-chart">{{ transactions_chart|safe }}</div>
-        <div id="categories-chart">{{categories_chart|safe}}</div>
+        <div class="card">
+          <div class="card-header">
+            Expenses and incomes
+          </div>
+          <div class="card-body">
+            <div id="transactions-chart">{{ transactions_chart|safe }}</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            Expenses by category
+          </div>
+          <div class="card-body">
+            <div id="categories-chart">{{ categories_chart|safe }}</div>
+          </div>
+        </div>
       </div>
       <div class="col-12 col-xl-4">
         <div class="card">
@@ -26,6 +40,7 @@
               </tbody>
             </table>
           </div>
+        </div>
       </div>
     </div>
   </div>
