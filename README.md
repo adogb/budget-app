@@ -1,7 +1,4 @@
 # Budget Web App
-Work in progress...
-
-![Work in progess](./assets/images/overview.PNG)
 
 ## What?
 Web app which shows transactions on chosen bank accounts and presents insights
@@ -14,7 +11,15 @@ to manually type transactions and I want to create speding categories that fit
 with my lifestyle.  
 
 ## How?
-I intend to write the app in Python and Flask, and retrieve banking transactions
-via the Nordigen API. For graphs, I am using the plotly.py library. For CSS, I 
-am using the Bootstrap framework.
+I am building this app using TypeScript and React with the following stack:
+
+- **Frontend**: React with TypeScript, Next.js for server-side rendering
+- **UI Framework**: Tailwind CSS
+- **Charts**: Recharts for data visualization
+- **API Integration**: Axios for banking API communication
+- **Authentication**: NextAuth.js
+- **Database**: Prisma with PostgreSQL
+- **Deployment**: Vercel
+
+The app will retrieve banking transactions via the Nordigen API to provide automated tracking and customizable spending categories.
 

@@ -10,3 +10,6 @@ config.py
 
 # VS code folder 
 .vscode
+
+# archived reference files
+archive_ref/
