@@ -18,15 +18,7 @@ to manually type transactions and I want to create speding categories that fit
 with my lifestyle.  
 
 ## How?
-I am building this app using TypeScript and React with the following stack (TBC):
-
-- **Frontend**: React with TypeScript, Next.js for server-side rendering
-- **UI Framework**: Tailwind CSS
-- **Charts**: Recharts for data visualization
-- **API Integration**: Axios for banking API communication
-- **Authentication**: NextAuth.js
-- **Database**: Prisma with PostgreSQL
-- **Deployment**: Vercel
+I am building this app using Python, stack TBC.
 
 The app will retrieve banking transactions via the Nordigen API to provide automated tracking and customizable spending categories.
 
