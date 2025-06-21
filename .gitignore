@@ -1,15 +1,12 @@
-__pycache__
-*.sqlite3
-*.xlsx
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# sensitive info to access Nordigen API
-config.py
+# Virtual environment
+venv/
+.venv/
+.env
 
-# setup files
-*setup.py
+# VSCode settings
+.vscode/
 
-# VS code folder 
-.vscode
-
-# archived reference files
+# Old Python project files
 archive_ref/
