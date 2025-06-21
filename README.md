@@ -1,8 +1,15 @@
 # Budget Web App
 
-## What?
-Web app which shows transactions on chosen bank accounts and presents insights
-on spending categories and budget.
+## Features
+- import bank accounts and transactions
+- manually add transactions
+- categorise transactions
+- custom spending categories
+- overview of expenses, income and balance
+- filtering
+- set up budget and limits
+- add custom labels on imported transactions
+- auth (email + password)
 
 ## Why?
 I have not yet found a budgetting app which allows both automatic retrieval of 
@@ -11,15 +18,7 @@ to manually type transactions and I want to create speding categories that fit
 with my lifestyle.  
 
 ## How?
-I am building this app using TypeScript and React with the following stack:
-
-- **Frontend**: React with TypeScript, Next.js for server-side rendering
-- **UI Framework**: Tailwind CSS
-- **Charts**: Recharts for data visualization
-- **API Integration**: Axios for banking API communication
-- **Authentication**: NextAuth.js
-- **Database**: Prisma with PostgreSQL
-- **Deployment**: Vercel
+I am building this app using Python, stack TBC.
 
 The app will retrieve banking transactions via the Nordigen API to provide automated tracking and customizable spending categories.
 
