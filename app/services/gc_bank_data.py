@@ -55,10 +55,26 @@ class GoCardlessBankDataClient:
         url = f"{BASE_URL}/token/new/"
         
         # Don't use self.session here to avoid auth loop
-        resp = requests.post(url, json={
-            "secret_id": self.secret_id,
-            "secret_key": self.secret_key
-        })
+        # Include proper headers for the API request
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        }
+        
+        resp = requests.post(
+            url, 
+            json={
+                "secret_id": self.secret_id,
+                "secret_key": self.secret_key
+            },
+            headers=headers
+        )
+        
+        # Print response details for debugging if there's an error
+        if resp.status_code != 200:
+            print(f"Token request failed: {resp.status_code} {resp.reason}")
+            print(f"Response: {resp.text}")
+        
         resp.raise_for_status()
         data = resp.json()
         
@@ -87,7 +103,22 @@ class GoCardlessBankDataClient:
         url = f"{BASE_URL}/token/refresh/"
         
         # Don't use self.session here to avoid auth loop
-        resp = requests.post(url, json={"refresh": self.refresh_token})
+        # Include proper headers for the API request
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        }
+        
+        resp = requests.post(
+            url, 
+            json={"refresh": self.refresh_token},
+            headers=headers
+        )
+        
+        # Print response details for debugging if there's an error
+        if resp.status_code != 200:
+            print(f"Token refresh failed: {resp.status_code} {resp.reason}")
+            print(f"Response: {resp.text}")
         
         if resp.status_code == 401:
             # Refresh token expired or invalid, get a new one
