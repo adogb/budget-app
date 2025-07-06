@@ -32,29 +32,22 @@ The MVP will focus on just one user (the developer) and will include the followi
 - **Multi-Account Support**: Connect and manage multiple accounts including joint accounts.
 - Fetch, update, and store transactions in a secure backend.
 - **Real-time Balance Tracking**: Display current account balances with refresh capability.
-- Handle authentication, token refresh, and error states gracefully.
 
 ### 🗂 Transaction Management & Basic Categorization
 
-- **Custom Categories**: Create, edit, and manage personalized spending categories that match your lifestyle.
+- **Custom Categories**: Create categories that match your lifestyle.
+- **Transaction Categorization**: Assign transactions to user-defined categories.
 - **Bulk Categorization**: Perform bulk categorization actions on multiple transactions.
-- **Transaction Search**: Search and filter transactions based on partial search of transaction "name".
-- **Transaction Views**: List transactions with basic filtering and sorting capabilities.
 
 ### 💻 Visual Analytics & User Experience
 
-- **Visual Analytics**: View spending breakdowns through:
-  - Interactive charts (pie charts, bar graphs, trend analysis)
-  - Detailed tables with sorting and filtering capabilities
-  - Customizable time period views (daily, weekly, monthly, quarterly, yearly)
-- Minimalist, intuitive web UI featuring:
-    - **Dashboard Overview**: Visual spending summary with charts and key metrics across customizable time periods
-    - **Category Management**: Easy creation and editing of spending categories
-    - **Transaction Views**: List, filter, and categorize transactions with bulk actions
-    - **Analytics Pages**: Interactive graphs and detailed tables showing spending patterns with period customization
-    - **Account Management**: Multi-account dashboard
-- **Responsive Design**: Works seamlessly on desktop and mobile devices
-- No user registration (for MVP); access is controlled by you.
+- **Transactions Overview**: List transactions with basic filtering (on transaction name) and sorting capabilities (by date).
+- **Visual breakdown**: View spending breakdowns through:
+  - Bar chart (categories on x-axis, amounts on y-axis)
+  - Customizable time period views (monthly and yearly for MVP)
+
+### User setup
+- No complicated user authentication for now
 
 ---
 
@@ -106,9 +99,9 @@ The MVP will focus on just one user (the developer) and will include the followi
 ## 5. Architecture
 
 - **Backend:** FastAPI (Python) with data visualization endpoints
-- **Frontend:** Modern web UI with interactive charts (Chart.js, D3.js, or similar)
+- **Frontend:** Modern web UI with interactive charts (Chart.js, D3.js, or similar), using HTMX + Tailwind CSS + Jinja2
 - **Database:** SQLite for local/dev, Postgres for production (TBD)
-- **External Services:** Nordigen for open banking data
+- **External Services:** GoCardless Bank Data API for open banking data
 - **Visualization:** Client-side charting libraries for responsive graphs and analytics
 - **Config:** Environment variables via `.env` files, loaded per environment
 - **Deployment:** Local first, with easy cloud deployment (e.g., Fly.io, Render, Railway)
