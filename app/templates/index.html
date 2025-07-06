@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Budget App - Home{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <div class="bg-white shadow-md rounded-lg overflow-hidden p-6 mb-6">
+        <h1 class="text-3xl font-bold mb-4">Welcome to Budget App</h1>
+        <p class="text-lg text-gray-700 mb-6">Your personal finance management tool</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-indigo-50 p-6 rounded-lg border border-indigo-100">
+                <h2 class="text-xl font-semibold text-indigo-800 mb-3">Get Started</h2>
+                <p class="text-gray-700 mb-4">Connect your bank accounts and start tracking your finances.</p>
+                <a href="/setup" class="inline-block bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
+                    Setup Your Bank Connection
+                </a>
+            </div>
+            
+            <div class="bg-green-50 p-6 rounded-lg border border-green-100">
+                <h2 class="text-xl font-semibold text-green-800 mb-3">Your Accounts</h2>
+                <p class="text-gray-700 mb-4">View your connected bank accounts and transactions.</p>
+                <a href="/accounts" class="inline-block bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">
+                    View Accounts
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white shadow-md rounded-lg overflow-hidden p-6">
+        <h2 class="text-2xl font-bold mb-4">Features</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="p-4 border rounded-lg">
+                <h3 class="font-semibold text-lg mb-2">Bank Integration</h3>
+                <p class="text-gray-600">Securely connect to your bank accounts and sync transactions.</p>
+            </div>
+            
+            <div class="p-4 border rounded-lg">
+                <h3 class="font-semibold text-lg mb-2">Transaction Management</h3>
+                <p class="text-gray-600">View, search, and categorize your transactions.</p>
+            </div>
+            
+            <div class="p-4 border rounded-lg">
+                <h3 class="font-semibold text-lg mb-2">Analytics</h3>
+                <p class="text-gray-600">Visualize your spending with interactive charts and reports.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

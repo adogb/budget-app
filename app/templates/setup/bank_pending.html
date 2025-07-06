@@ -1,0 +1,27 @@
+<!-- Bank Authentication Pending -->
+<div id="bank-auth-pending" class="space-y-6" data-setup-step="bank-pending">
+    <div class="flex items-center space-x-2 text-sm">
+        <span class="text-indigo-600 font-medium">Step 3: Authenticating with Your Bank</span>
+    </div>
+    
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <h3 class="font-medium text-yellow-800">Authentication in Progress</h3>
+        <p class="text-yellow-700 mt-1">We're waiting for your bank authentication to complete. This may take a moment.</p>
+    </div>
+    
+    <div class="flex flex-col items-center justify-center py-6">
+        <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mb-4"></div>
+        <p class="text-center">Checking authentication status...</p>
+    </div>
+    
+    <div class="flex justify-center mt-6">
+        <button
+            hx-get="/setup/bank-callback"
+            hx-target="#bank-auth-pending"
+            hx-swap="outerHTML"
+            hx-trigger="click, every 5s"
+            class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
+            Check Status Again
+        </button>
+    </div>
+</div>

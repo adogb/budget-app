@@ -18,6 +18,10 @@ idna==3.10
     # via
     #   anyio
     #   requests
+jinja2==3.1.6
+    # via -r requirements.in
+markupsafe==3.0.2
+    # via jinja2
 nordigen==1.4.2
     # via -r requirements.in
 pydantic==2.11.5
@@ -26,6 +30,8 @@ pydantic==2.11.5
     #   fastapi
 pydantic-core==2.33.2
     # via pydantic
+python-dotenv==1.1.1
+    # via -r requirements.in
 requests==2.32.3
     # via nordigen
 sniffio==1.3.1

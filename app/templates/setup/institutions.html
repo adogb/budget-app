@@ -1,0 +1,76 @@
+<!-- Bank Selection Step -->
+<div id="bank-selection" class="space-y-6" data-setup-step="institutions">
+    <div class="flex items-center space-x-2 text-sm">
+        <span class="text-indigo-600 font-medium">Step 2: Select Your Bank</span>
+    </div>
+    
+    <h3 class="text-xl font-medium">Choose your bank</h3>
+    <p class="text-gray-600">Select your bank from the list below to connect your accounts.</p>
+    
+    <div class="mt-4">
+        <div class="relative">
+            <input type="text" id="bank-search" placeholder="Search banks..." 
+                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+    </div>
+    
+    <div class="mt-4 max-h-80 overflow-y-auto pr-2">
+        <div id="banks-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for bank in institutions %}
+            <div class="bank-item border rounded-lg p-4 hover:bg-gray-50 transition cursor-pointer"
+                 hx-post="/setup/start-bank-link/{{ bank.id }}"
+                 hx-target="#bank-selection"
+                 hx-swap="outerHTML"
+                 hx-indicator="#loading-indicator">
+                <div class="flex items-center">
+                    {% if bank.logo %}
+                    <img src="{{ bank.logo }}" alt="{{ bank.name }}" class="w-12 h-12 object-contain mr-4">
+                    {% else %}
+                    <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-4">
+                        <span class="text-gray-500 text-xl">🏦</span>
+                    </div>
+                    {% endif %}
+                    <span class="font-medium">{{ bank.name }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Loading indicator -->
+    <div id="loading-indicator" class="htmx-indicator flex justify-center py-4">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+    </div>
+    
+    <div class="flex justify-between mt-8">
+        <button
+            hx-get="/setup/countries"
+            hx-target="#bank-selection"
+            hx-swap="outerHTML"
+            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+            Back
+        </button>
+    </div>
+</div>
+
+<script>
+    // Simple bank search functionality
+    document.addEventListener('htmx:afterSwap', function() {
+        const searchInput = document.getElementById('bank-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                const bankItems = document.querySelectorAll('.bank-item');
+                
+                bankItems.forEach(item => {
+                    const bankName = item.textContent.toLowerCase();
+                    if (bankName.includes(searchTerm)) {
+                        item.style.display = '';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            });
+        }
+    });
+</script>

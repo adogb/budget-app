@@ -1,0 +1,72 @@
+<!-- Account Selection Step -->
+<div id="account-selection" class="space-y-6" data-setup-step="accounts">
+    <div class="flex items-center space-x-2 text-sm">
+        <span class="text-indigo-600 font-medium">Step 4: Select Accounts</span>
+    </div>
+    
+    <h3 class="text-xl font-medium">Select accounts to connect</h3>
+    <p class="text-gray-600">Choose which accounts you want to use with Budget App.</p>
+    
+    <div class="mt-6">
+        <form id="account-form" hx-post="/setup/complete-setup" hx-target="#account-selection" hx-swap="outerHTML">
+            <div class="space-y-4">
+                {% for account in accounts %}
+                <div class="border rounded-lg p-4 hover:bg-gray-50 transition">
+                    <label class="flex items-start">
+                        <input type="checkbox" name="account_ids" value="{{ account.id }}" class="mt-1 h-5 w-5 text-indigo-600 rounded">
+                        <div class="ml-3">
+                            <div class="font-medium">{{ account.name }}</div>
+                            <div class="text-gray-600 text-sm">IBAN: {{ account.iban|default('Not available') }}</div>
+                            <div class="mt-1 flex items-center">
+                                <span class="font-medium text-lg">{{ account.balance }} {{ account.currency }}</span>
+                                <span class="ml-2 px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">Available</span>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="flex justify-between mt-8">
+                <button type="button"
+                        onclick="window.location.href='/setup'"
+                        class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                    Cancel
+                </button>
+                
+                <button type="submit"
+                        class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition"
+                        id="save-accounts-btn" disabled>
+                    Save Selected Accounts
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Enable/disable submit button based on selection
+    document.addEventListener('htmx:afterSwap', function() {
+        const form = document.getElementById('account-form');
+        if (form) {
+            const checkboxes = form.querySelectorAll('input[type="checkbox"]');
+            const submitBtn = document.getElementById('save-accounts-btn');
+            
+            function updateButton() {
+                let anyChecked = false;
+                checkboxes.forEach(checkbox => {
+                    if (checkbox.checked) {
+                        anyChecked = true;
+                    }
+                });
+                submitBtn.disabled = !anyChecked;
+            }
+            
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateButton);
+            });
+            
+            updateButton();
+        }
+    });
+</script>
