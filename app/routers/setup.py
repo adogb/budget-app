@@ -1,3 +1,4 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -185,26 +186,13 @@ async def bank_callback(request: Request, client: GoCardlessBankDataClient = Dep
         for account_id in accounts:
             try:
                 details = client.get_account_details(account_id)
-                balances = client.get_account_balances(account_id)
                 
-                # Get a friendly account name and current balance
-                account_name = details.get('account', {}).get('name', 'Account')
-                
-                balance_info = {}
-                for balance in balances.get('balances', []):
-                    if balance.get('balanceType') == 'interimAvailable':
-                        balance_info = {
-                            'amount': balance.get('balanceAmount', {}).get('amount', '0'),
-                            'currency': balance.get('balanceAmount', {}).get('currency', '')
-                        }
-                        break
+                # Get account name
+                account_name = details.get('name', '<unnamed account>')
                 
                 account_details.append({
                     'id': account_id,
-                    'name': account_name,
-                    'iban': details.get('account', {}).get('iban', ''),
-                    'balance': balance_info.get('amount', '0'),
-                    'currency': balance_info.get('currency', '')
+                    'name': account_name
                 })
             except Exception as e:
                 # Log the error but continue with other accounts
@@ -221,37 +209,39 @@ async def bank_callback(request: Request, client: GoCardlessBankDataClient = Dep
 @router.post("/complete-setup")
 async def complete_setup(
     request: Request,
-    account_ids: List[str],
     client: GoCardlessBankDataClient = Depends(get_bank_client)
 ):
     """Complete the setup by saving the selected accounts"""
     try:
+        # Get form data
+        form_data = await request.form()
+        
+        # Extract account IDs (may be a single value or a list)
+        account_ids_raw = form_data.getlist("account_ids")
+        
+        # Ensure we have a list even if only one item was selected
+        if not account_ids_raw:
+            raise HTTPException(status_code=400, detail="No accounts selected")
+        
         # Check if we have requisition data
         requisition_id = setup_data.get('requisition_id')
         if not requisition_id:
             raise HTTPException(status_code=400, detail="No active bank linking process found")
-        
-        # Get all available accounts
-        all_accounts = setup_data.get('accounts', [])
-        
-        # Validate that selected accounts are from our requisition
-        for account_id in account_ids:
-            if account_id not in all_accounts:
-                raise HTTPException(status_code=400, detail=f"Invalid account ID: {account_id}")
-        
-        # Ensure config directory exists
-        if not os.path.exists(CONFIG_DIR):
-            os.makedirs(CONFIG_DIR)
-        
-        # Get token data for persistence
+            
+        # Get GoCardless tokens for future API calls
         token_data = client.save_tokens_to_dict()
+        
+        # Create config directory if it doesn't exist
+        os.makedirs("config", exist_ok=True)
         
         # Create the config object
         config = {
             "tokens": token_data,
             "requisition_id": requisition_id,
             "institution_id": setup_data.get('institution_id', ''),
-            "selected_accounts": account_ids
+            "selected_accounts": account_ids_raw,
+            "setup_complete": True,
+            "setup_date": datetime.now().isoformat()
         }
         
         # Save the config to file
