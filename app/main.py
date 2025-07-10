@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from fastapi import FastAPI, Request
@@ -30,13 +31,10 @@ app.include_router(accounts.router)
 app.include_router(transactions.router)
 app.include_router(setup.router)
 
+
 @app.get("/", response_class=HTMLResponse)
 def read_root(request: Request):
     """Render the home page"""
     return templates.TemplateResponse(
-        "index.html", 
-        {
-            "request": request,
-            "title": "Budget App - Home"
-        }
+        "index.html", {"request": request, "title": "Budget App - Home"}
     )
