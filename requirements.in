@@ -1,3 +1,6 @@
 fastapi
 pydantic
 nordigen
+python-dotenv
+jinja2
+black

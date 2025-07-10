@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Budget App{% endblock %}</title>
+    <!-- Tailwind CSS via CDN for simplicity in MVP -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTMX for interactive features -->
+    <script src="https://unpkg.com/htmx.org@1.9.6" defer></script>
+    <!-- Optional hyperscript for more interactive features -->
+    <script src="https://unpkg.com/hyperscript.org@0.9.11" defer></script>
+    <!-- Alpine.js for additional UI interactivity where needed -->
+    <script defer src="https://unpkg.com/alpinejs@3.13.0/dist/cdn.min.js"></script>
+    {% block head %}{% endblock %}
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-indigo-600 text-white shadow-md">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-xl font-bold">Budget App</h1>
+            <nav>
+                <ul class="flex space-x-4">
+                    <li><a href="/" class="hover:underline">Home</a></li>
+                    <li><a href="/setup" class="hover:underline">Setup</a></li>
+                    <li><a href="/accounts" class="hover:underline">Accounts</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-gray-800 text-white py-6 mt-auto">
+        <div class="container mx-auto px-4 text-center">
+            <p>© 2025 Budget App - A personal finance manager</p>
+        </div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+    <!-- Custom app scripts -->
+    <script src="/static/js/setup.js"></script>
+</body>
+</html>

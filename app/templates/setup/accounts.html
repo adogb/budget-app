@@ -1,0 +1,69 @@
+<!-- Account Selection Step -->
+<div id="account-selection" class="space-y-6" data-setup-step="accounts">
+    <div class="flex items-center space-x-2 text-sm">
+        <span class="text-indigo-600 font-medium">Step 4: Select Accounts</span>
+    </div>
+    
+    <h3 class="text-xl font-medium">Select accounts to connect</h3>
+    <p class="text-gray-600">Choose which accounts you want to use with Budget App.</p>
+    
+    <div class="mt-6">
+        <!-- Removed hx-post and using standard form submission for reliability -->
+        <form id="account-form" action="/setup/complete-setup" method="post">
+            <div class="space-y-4">
+                {% for account in accounts %}
+                <div class="border rounded-lg p-4 hover:bg-gray-50 transition">
+                    <label class="flex items-start">
+                        <input type="checkbox" name="account_ids" value="{{ account.id }}" class="mt-1 h-5 w-5 text-indigo-600 rounded account-checkbox">
+                        <div class="ml-3">
+                            <div class="font-medium">{{ account.name }}</div>
+                        </div>
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="flex justify-between mt-8">
+                <button type="button"
+                        onclick="window.location.href='/setup'"
+                        class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                    Cancel
+                </button>
+                
+                <button type="submit"
+                        class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition"
+                        id="save-accounts-btn">
+                    Save Selected Accounts
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Simplified JavaScript that runs immediately
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkboxes = document.querySelectorAll('.account-checkbox');
+        const submitBtn = document.getElementById('save-accounts-btn');
+        
+        // Initialize button state
+        updateButtonState();
+        
+        // Add event listeners to checkboxes
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateButtonState);
+        });
+        
+        function updateButtonState() {
+            let anyChecked = Array.from(checkboxes).some(checkbox => checkbox.checked);
+            submitBtn.disabled = !anyChecked;
+            
+            // Visual feedback when disabled
+            if (!anyChecked) {
+                submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+    });
+</script>

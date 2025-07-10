@@ -1,0 +1,36 @@
+<!-- Country Selection Step -->
+<div id="country-selection" class="space-y-6" data-setup-step="countries">
+    <div class="flex items-center space-x-2 text-sm">
+        <span class="text-indigo-600 font-medium">Step 1: Select Your Country</span>
+    </div>
+    
+    <h3 class="text-xl font-medium">Where is your bank located?</h3>
+    <p class="text-gray-600">We need to know which country your bank is in to show you the available banks.</p>
+    
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
+        {% for country in countries %}
+        <button
+            hx-get="/setup/institutions/{{ country.code }}"
+            hx-target="#country-selection"
+            hx-swap="outerHTML"
+            hx-indicator="#loading-indicator"
+            class="flex flex-col items-center p-4 border rounded-lg hover:bg-gray-50 transition">
+            <span class="text-2xl mb-2">{{ country.flag|default('🏦') }}</span>
+            <span class="font-medium">{{ country.name }}</span>
+        </button>
+        {% endfor %}
+    </div>
+    
+    <!-- Loading indicator -->
+    <div id="loading-indicator" class="htmx-indicator flex justify-center py-4">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+    </div>
+    
+    <div class="flex justify-between mt-8">
+        <button
+            onclick="window.location.href='/setup'"
+            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+            Back
+        </button>
+    </div>
+</div>
