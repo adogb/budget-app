@@ -12,3 +12,6 @@ venv/
 
 # Old Python project files
 archive_ref/
+
+# config
+config/

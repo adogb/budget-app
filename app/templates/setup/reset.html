@@ -1,0 +1,16 @@
+<!-- Setup Reset Response -->
+<div id="setup-check" class="space-y-4">
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 class="font-medium text-blue-800">Setup Reset Successfully</h3>
+        <p class="text-blue-700 mt-1">Your bank connection has been reset. You can now set up a new connection.</p>
+    </div>
+    
+    <div class="mt-6">
+        <button hx-get="/setup/countries"
+                hx-target="#setup-check"
+                hx-swap="outerHTML"
+                class="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
+            Start Setup
+        </button>
+    </div>
+</div>
