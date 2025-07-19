@@ -15,3 +15,9 @@ archive_ref/
 
 # config
 config/
+
+# PRD
+project_requirements.md
+
+# Github Copilot instructions
+.github/instructions/
