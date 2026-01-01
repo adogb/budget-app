@@ -1,0 +1,16 @@
+<!-- Category Edit Form (used for AJAX responses) -->
+<div>
+    <input type="hidden" name="id" value="{{ category.id }}">
+    <input type="text" name="name" value="{{ category.name }}">
+    <input type="color" name="color" value="{{ category.color or '#CCCCCC' }}">
+    <select name="parent_id">
+        <option value="">None (Root Category)</option>
+        {% for cat in categories %}
+            {% if cat.id != category.id %}
+            <option value="{{ cat.id }}" {% if cat.id == category.parent_id %}selected{% endif %}>
+                {{ cat.name }}
+            </option>
+            {% endif %}
+        {% endfor %}
+    </select>
+</div>

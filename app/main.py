@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from app.routers import accounts, transactions, setup
+from app.routers import accounts, transactions, setup, categories
 from app.services.gc_bank_data import GoCardlessBankDataClient
 import os
 from dotenv import load_dotenv
@@ -26,6 +26,7 @@ templates = Jinja2Templates(directory="app/templates")
 app.include_router(accounts.router)
 app.include_router(transactions.router)
 app.include_router(setup.router)
+app.include_router(categories.router)
 
 
 @app.get("/", response_class=HTMLResponse)

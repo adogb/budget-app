@@ -4,3 +4,5 @@ nordigen
 python-dotenv
 jinja2
 black
+sqlalchemy
+uvicorn

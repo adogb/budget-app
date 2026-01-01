@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block title %}Categories - Budget App{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Categories</h1>
+        <button id="add-category-btn" 
+                class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
+            Add Category
+        </button>
+    </div>
+
+    <!-- Category Form Dialog -->
+    <div id="category-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="modal-title" class="text-xl font-semibold">Add New Category</h2>
+                <button class="text-gray-500 hover:text-gray-700" id="close-modal">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <form id="category-form" hx-post="/categories/" hx-target="#categories-tree" hx-swap="beforeend">
+                <input type="hidden" id="category-id" name="id">
+                
+                <div class="mb-4">
+                    <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
+                    <input type="text" id="name" name="name" required
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                
+                <div class="mb-4">
+                    <label for="color" class="block text-sm font-medium text-gray-700">Color</label>
+                    <div class="flex items-center mt-1">
+                        <input type="color" id="color" name="color" value="#4A6FA5"
+                               class="h-10 w-10 border border-gray-300 rounded-md shadow-sm">
+                        <span id="color-preview" class="ml-2 px-3 py-1 rounded-md text-white" style="background-color: #4A6FA5">
+                            #4A6FA5
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <label for="parent_id" class="block text-sm font-medium text-gray-700">Parent Category (optional)</label>
+                    <select id="parent_id" name="parent_id" 
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">None (Root Category)</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}">{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="flex justify-end">
+                    <button type="button" id="cancel-btn"
+                            class="mr-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none">
+                        Save Category
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main content with tree and flat views -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="border-b border-gray-200">
+            <nav class="flex" aria-label="Tabs">
+                <button class="text-gray-500 hover:text-gray-700 hover:border-gray-300 px-4 py-4 text-sm font-medium border-b-2 border-indigo-500"
+                        id="tree-tab">
+                    Hierarchical View
+                </button>
+                <button class="text-gray-500 hover:text-gray-700 hover:border-gray-300 px-4 py-4 text-sm font-medium"
+                        id="list-tab">
+                    List View
+                </button>
+            </nav>
+        </div>
+        
+        <!-- Tree View -->
+        <div id="tree-view" class="p-6">
+            <ul id="categories-tree" class="space-y-2">
+                {% include "categories/tree_items.html" %}
+            </ul>
+        </div>
+        
+        <!-- List View -->
+        <div id="list-view" class="hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Color
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Name
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Parent
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="categories-list">
+                        {% for category in categories %}
+                        <tr id="category-row-{{ category.id }}">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="w-6 h-6 rounded-full" style="background-color: {{ category.color or '#CCCCCC' }}"></div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {{ category.name }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% for parent in categories %}
+                                    {% if parent.id == category.parent_id %}
+                                        {{ parent.name }}
+                                    {% endif %}
+                                {% endfor %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                <button class="text-indigo-600 hover:text-indigo-900 edit-category" data-id="{{ category.id }}">
+                                    Edit
+                                </button>
+                                <button class="text-red-600 hover:text-red-900 delete-category" data-id="{{ category.id }}">
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // DOM elements
+        const modal = document.getElementById('category-modal');
+        const form = document.getElementById('category-form');
+        const addBtn = document.getElementById('add-category-btn');
+        const closeBtn = document.getElementById('close-modal');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const colorInput = document.getElementById('color');
+        const colorPreview = document.getElementById('color-preview');
+        const treeTab = document.getElementById('tree-tab');
+        const listTab = document.getElementById('list-tab');
+        const treeView = document.getElementById('tree-view');
+        const listView = document.getElementById('list-view');
+        const modalTitle = document.getElementById('modal-title');
+        
+        // Tab switching
+        treeTab.addEventListener('click', function() {
+            treeView.classList.remove('hidden');
+            listView.classList.add('hidden');
+            treeTab.classList.add('border-indigo-500');
+            listTab.classList.remove('border-indigo-500');
+        });
+        
+        listTab.addEventListener('click', function() {
+            listView.classList.remove('hidden');
+            treeView.classList.add('hidden');
+            listTab.classList.add('border-indigo-500');
+            treeTab.classList.remove('border-indigo-500');
+        });
+        
+        // Color picker preview
+        colorInput.addEventListener('input', function() {
+            colorPreview.style.backgroundColor = this.value;
+            colorPreview.textContent = this.value;
+        });
+        
+        // Show modal for adding category
+        addBtn.addEventListener('click', function() {
+            modalTitle.textContent = 'Add New Category';
+            form.reset();
+            form.setAttribute('hx-post', '/categories/?format=html');
+            form.setAttribute('hx-target', '#categories-tree');
+            form.setAttribute('hx-swap', 'beforeend');
+            modal.classList.remove('hidden');
+        });
+        
+        // Close modal
+        function closeModal() {
+            modal.classList.add('hidden');
+        }
+        
+        closeBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+        
+        // Close modal when clicking outside
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+        
+        // Edit category
+        document.querySelectorAll('.edit-category').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                fetch(`/categories/${id}?format=html`)
+                    .then(response => response.text())
+                    .then(html => {
+                        modalTitle.textContent = 'Edit Category';
+                        form.setAttribute('hx-post', `/categories/${id}`);
+                        form.setAttribute('hx-method', 'PUT');
+                        
+                        // Extract and set form values from the HTML
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = html;
+                        
+                        document.getElementById('category-id').value = id;
+                        document.getElementById('name').value = tempDiv.querySelector('[name="name"]').value;
+                        document.getElementById('color').value = tempDiv.querySelector('[name="color"]').value;
+                        document.getElementById('parent_id').value = tempDiv.querySelector('[name="parent_id"]').value;
+                        
+                        // Update color preview
+                        colorPreview.style.backgroundColor = document.getElementById('color').value;
+                        colorPreview.textContent = document.getElementById('color').value;
+                        
+                        modal.classList.remove('hidden');
+                    });
+            });
+        });
+        
+        // Delete category
+        document.querySelectorAll('.delete-category').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = this.getAttribute('data-id');
+                if (confirm('Are you sure you want to delete this category?')) {
+                    fetch(`/categories/${id}`, {
+                        method: 'DELETE'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Remove from list view
+                        const row = document.getElementById(`category-row-${id}`);
+                        if (row) row.remove();
+                        
+                        // Remove from tree view
+                        const treeItem = document.getElementById(`category-tree-${id}`);
+                        if (treeItem) treeItem.remove();
+                    });
+                }
+            });
+        });
+        
+        // Form submission handling
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            const url = form.getAttribute('hx-post');
+            const method = form.getAttribute('hx-method') || 'POST';
+            
+            // Convert FormData to JSON
+            const data = {};
+            formData.forEach((value, key) => {
+                // Don't include empty parent_id
+                if (key === 'parent_id' && value === '') return;
+                data[key] = value;
+            });
+            
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Refresh the page to show updated data
+                window.location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+            
+            closeModal();
+        });
+    });
+</script>
+{% endblock %}
