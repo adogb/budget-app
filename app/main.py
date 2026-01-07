@@ -16,9 +16,6 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-# Create a single client instance for dependency injection
-bank_client = GoCardlessBankDataClient()
-
 # Initialize the FastAPI app
 app = FastAPI(title="Budget App")
 
