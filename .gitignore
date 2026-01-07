@@ -21,3 +21,6 @@ project_requirements.md
 
 # Github Copilot instructions
 .github/instructions/
+
+# Database files
+*.db
