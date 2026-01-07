@@ -4,6 +4,9 @@ from app.services.config_service import ConfigService
 from app.services.account_service import AccountService
 from app.services.transaction_service import TransactionService
 from app.services.setup_service import SetupService
+from fastapi.templating import Jinja2Templates
+
+templates = Jinja2Templates(directory="app/templates")
 
 # Global instances for MVP
 _client = None

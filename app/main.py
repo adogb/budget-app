@@ -12,6 +12,7 @@ from app.services.exceptions import (
 )
 import os
 from dotenv import load_dotenv
+from app.dependencies import templates
 
 # Load environment variables from .env file
 load_dotenv()
@@ -21,9 +22,6 @@ app = FastAPI(title="Budget App")
 
 # Mount static files directory
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
-
-# Set up templates
-templates = Jinja2Templates(directory="app/templates")
 
 
 # Global exception handlers

@@ -1,16 +1,12 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from fastapi.responses import RedirectResponse, HTMLResponse
-from fastapi.templating import Jinja2Templates
 from app.services.setup_service import SetupService
 from app.services.config_service import ConfigService
-from app.dependencies import get_setup_service, get_config_service
+from app.dependencies import get_setup_service, get_config_service, templates
 from typing import List, Dict, Optional
 
 router = APIRouter(prefix="/setup", tags=["setup"])
-
-# Set up templates
-templates = Jinja2Templates(directory="app/templates")
 
 # In-memory storage for setup process
 # In a real app, this would use proper session management
