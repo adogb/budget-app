@@ -1,135 +1,86 @@
 """
 Service for managing bank account operations.
 
-Handles business logic for fetching and processing account data.
+Handles business logic for account data, using local database as primary source.
 """
 
-from typing import List
+from typing import List, Optional
 
-from app.clients.gc_bank_data import GoCardlessBankDataClient
-from app.services.config_service import ConfigService
-from app.services.exceptions import BankAPIError
+from sqlalchemy.orm import Session
+
+from app.db.repositories.account_repository import AccountRepository
+from app.db.models import Account as AccountDB
 from app.models.responses import AccountResponse
 
 
 class AccountService:
-    """Service for account-related operations."""
+    """Service for account-related operations using local database."""
 
-    def __init__(
-        self, bank_client: GoCardlessBankDataClient, config_service: ConfigService
-    ):
+    def __init__(self, db_session: Session, user_id: int = 1):
         """
         Initialize AccountService.
 
         Args:
-            bank_client: Client for bank API operations
-            config_service: Service for config operations
+            db_session: Database session for repository operations
+            user_id: The user ID (default 1 for MVP single-user)
         """
-        self.bank_client = bank_client
-        self.config_service = config_service
+        self.repo = AccountRepository(db_session)
+        self.user_id = user_id
 
-    def _extract_account_balance(self, balances_data: dict) -> tuple[str, str]:
+    def _to_response(self, account: AccountDB) -> AccountResponse:
         """
-        Extract the available balance from balances API response.
+        Convert database model to API response model.
 
         Args:
-            balances_data: Raw balances response from bank API
+            account: SQLAlchemy Account model
 
         Returns:
-            Tuple of (balance_amount, currency)
+            AccountResponse for API
         """
-        balance_amount = "0"
-        currency = ""
-
-        for balance in balances_data.get("balances", []):
-            if balance.get("balanceType") == "interimAvailable":
-                balance_amount = balance.get("balanceAmount", {}).get("amount", "0")
-                currency = balance.get("balanceAmount", {}).get("currency", "")
-                break
-
-        return balance_amount, currency
-
-    def _fetch_account_response(self, account_id: str) -> AccountResponse:
-        """
-        Fetch account details and balances, return formatted response.
-
-        Args:
-            account_id: The account ID to fetch
-
-        Returns:
-            AccountResponse with account data
-
-        Raises:
-            BankAPIError: If fetching account data fails
-        """
-        try:
-            # Fetch account details and balances
-            details = self.bank_client.get_account_details(account_id)
-            balances = self.bank_client.get_account_balances(account_id)
-
-            # Extract account name
-            account_name = details.get("account", {}).get("name", "Account")
-
-            # Extract balance and currency
-            balance_amount, currency = self._extract_account_balance(balances)
-
-            # Create account response
-            return AccountResponse(
-                id=account_id,
-                name=account_name,
-                iban=details.get("account", {}).get("iban", ""),
-                balance=float(balance_amount),
-                currency=currency,
-            )
-        except Exception as e:
-            raise BankAPIError(
-                f"Failed to fetch account data: {str(e)}", account_id=account_id
-            ) from e
+        return AccountResponse(
+            id=str(account.id),
+            name=account.name,
+            iban=account.iban,
+            balance=account.balance,
+            currency=account.currency,
+        )
 
     def get_all_accounts(self) -> List[AccountResponse]:
         """
-        Get all user's configured bank accounts.
+        Get all user's accounts from local database.
 
         Returns:
             List of AccountResponse objects
-
-        Raises:
-            SetupNotCompleteError: If setup hasn't been completed
-            BankAPIError: If fetching account data fails
         """
-        # Ensure setup is complete
-        self.config_service.require_setup_complete()
+        accounts = self.repo.get_all(self.user_id)
+        return [self._to_response(acc) for acc in accounts]
 
-        # Get selected account IDs
-        account_ids = self.config_service.get_selected_accounts()
-        if not account_ids:
-            return []
-
-        # Fetch details for each account
-        accounts = []
-        for account_id in account_ids:
-            try:
-                account = self._fetch_account_response(account_id)
-                accounts.append(account)
-            except BankAPIError as e:
-                # Log the error but continue with other accounts
-                print(f"Error fetching account {account_id}: {str(e)}")
-                # In production, use proper logging instead of print
-                continue
-
-        return accounts
-
-    def get_account_by_id(self, account_id: str) -> AccountResponse:
+    def get_account_by_id(self, account_id: int) -> Optional[AccountResponse]:
         """
-        Get a specific account by ID.
+        Get a specific account by ID from local database.
 
         Args:
             account_id: The account ID to fetch
 
         Returns:
-            AccountResponse with account data
-
-        Raises:
-            BankAPIError: If fetching account data fails
+            AccountResponse with account data, or None if not found
         """
-        return self._fetch_account_response(account_id)
+        account = self.repo.get_by_id(account_id)
+        if account and account.user_id == self.user_id:
+            return self._to_response(account)
+        return None
+
+    def get_account_by_iban(self, iban: str) -> Optional[AccountResponse]:
+        """
+        Get account by IBAN from local database.
+
+        Args:
+            iban: The IBAN to search for
+
+        Returns:
+            AccountResponse with account data, or None if not found
+        """
+        account = self.repo.get_by_iban(iban)
+        if account and account.user_id == self.user_id:
+            return self._to_response(account)
+        return None

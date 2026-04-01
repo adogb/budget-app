@@ -1,5 +1,7 @@
+{% extends base_template|default("setup/setup_base.html") %}
+{% block content %}
 <!-- Account Selection Step -->
-<div id="account-selection" class="space-y-6" data-setup-step="accounts">
+<div id="setup-step-content" class="space-y-6" data-step="accounts" data-step-label="Step 4 of 4" data-progress="85">
     <div class="flex items-center space-x-2 text-sm">
         <span class="text-indigo-600 font-medium">Step 4: Select Accounts</span>
     </div>
@@ -67,3 +69,4 @@
         }
     });
 </script>
+{% endblock %}

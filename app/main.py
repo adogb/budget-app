@@ -1,9 +1,8 @@
-from fastapi import FastAPI, Request
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Request, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from app.routers import accounts, transactions, setup
-from app.clients.gc_bank_data import GoCardlessBankDataClient
 from app.services.exceptions import (
     SetupNotCompleteError,
     ConfigNotFoundError,
@@ -12,13 +11,25 @@ from app.services.exceptions import (
 )
 import os
 from dotenv import load_dotenv
-from app.dependencies import templates
+from app.dependencies import templates, get_account_service
+from app.services.account_service import AccountService
+from app.db.database import init_db
 
 # Load environment variables from .env file
 load_dotenv()
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Read why here: https://fastapi.tiangolo.com/advanced/events/#lifespan
+
+    # Initialize the database before starting app request handling
+    init_db()
+    yield
+
+
 # Initialize the FastAPI app
-app = FastAPI(title="Budget App")
+app = FastAPI(title="Budget App", lifespan=lifespan)
 
 # Mount static files directory
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -70,8 +81,19 @@ app.include_router(setup.router)
 
 
 @app.get("/", response_class=HTMLResponse)
-def read_root(request: Request):
-    """Render the home page"""
+def read_root(
+    request: Request,
+    account_service: AccountService = Depends(get_account_service),
+):
+    """Render the dashboard home page with account list"""
+    accounts = []
+    try:
+        accounts = account_service.get_all_accounts()
+    except (SetupNotCompleteError, ConfigNotFoundError, BankAPIError):
+        # If setup not complete or error fetching accounts, show empty state
+        pass
+
     return templates.TemplateResponse(
-        "index.html", {"request": request, "title": "Budget App - Home"}
+        "index.html",
+        {"request": request, "title": "Dashboard - Budget App", "accounts": accounts},
     )

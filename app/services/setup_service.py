@@ -6,10 +6,14 @@ Handles business logic for initial bank connection and configuration.
 
 from typing import List, Dict, Optional
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from app.clients.gc_bank_data import GoCardlessBankDataClient
 from app.services.config_service import ConfigService
 from app.services.exceptions import BankAPIError
+from app.db.repositories.account_repository import AccountRepository
+from app.db.repositories.bank_integration_repository import BankIntegrationRepository
+from app.db.models import Account as AccountDB, BankIntegration as BankIntegrationDB
 
 
 class CountryData(BaseModel):
@@ -56,17 +60,26 @@ class SetupService:
     ]
 
     def __init__(
-        self, bank_client: GoCardlessBankDataClient, config_service: ConfigService
+        self,
+        bank_client: GoCardlessBankDataClient,
+        config_service: ConfigService,
+        db_session: Session,
+        user_id: int = 1,
     ):
         """
         Initialize SetupService.
 
         Args:
             bank_client: Client for bank API operations
-            config_service: Service for config operations
+            config_service: Service for config operations (deprecated, will be removed)
+            db_session: Database session for saving accounts
+            user_id: The user ID (default 1 for MVP single-user)
         """
         self.bank_client = bank_client
         self.config_service = config_service
+        self.account_repo = AccountRepository(db_session)
+        self.integration_repo = BankIntegrationRepository(db_session)
+        self.user_id = user_id
 
     def get_supported_countries(self) -> List[CountryData]:
         """
@@ -184,26 +197,116 @@ class SetupService:
         return account_details
 
     def complete_setup(
-        self, requisition_id: str, institution_id: str, selected_account_ids: List[str]
+        self,
+        requisition_id: str,
+        institution_id: str,
+        selected_account_ids: List[str],
+        country_code: str = "GB",
     ) -> None:
         """
-        Complete the setup process by saving configuration.
+        Complete the setup process by saving bank integration and accounts to database.
 
         Args:
             requisition_id: GoCardless requisition ID
             institution_id: Bank institution ID
             selected_account_ids: List of selected account IDs
+            country_code: Country code for the institution
         """
         # Get tokens from bank client
         token_data = self.bank_client.save_tokens_to_dict()
 
-        # Save complete configuration
+        # Save bank integration to database
+        existing_integration = self.integration_repo.get_by_requisition_id(
+            requisition_id
+        )
+        if not existing_integration:
+            integration = BankIntegrationDB(
+                user_id=self.user_id,
+                institution_id=institution_id,
+                country_code=country_code,
+                requisition_id=requisition_id,
+                access_token=token_data.get("access"),
+                refresh_token=token_data.get("refresh"),
+                access_valid_days=token_data.get("access_expires", 90),
+                refresh_valid_days=token_data.get("refresh_expires", 90),
+            )
+            self.integration_repo.create(integration)
+        else:
+            # Update existing integration tokens
+            existing_integration.access_token = token_data.get("access")
+            existing_integration.refresh_token = token_data.get("refresh")
+            existing_integration.access_valid_days = token_data.get(
+                "access_expires", 90
+            )
+            existing_integration.refresh_valid_days = token_data.get(
+                "refresh_expires", 90
+            )
+            self.integration_repo.update(existing_integration)
+
+        # Also save to config file for backward compatibility (will remove later)
         self.config_service.create_complete_config(
             tokens=token_data,
             requisition_id=requisition_id,
             institution_id=institution_id,
-            selected_accounts=selected_account_ids,
+            country_code=country_code,
         )
+
+        # Get institution name
+        bank_name = "Unknown Bank"
+        try:
+            institutions = self.bank_client.get_institutions(country_code)
+            for inst in institutions:
+                if inst.get("id") == institution_id:
+                    bank_name = inst.get("name", "Unknown Bank")
+                    break
+        except Exception as e:
+            print(f"Error fetching institution name: {str(e)}")
+
+        # Save accounts to database
+        for account_id in selected_account_ids:
+            try:
+                # Get account details from API
+                details = self.bank_client.get_account_details(account_id)
+                balances = self.bank_client.get_account_balances(account_id)
+
+                # Extract account information
+                account_data = details.get("account", {})
+                iban = account_data.get("iban", "")
+                account_name = account_data.get("name", "Unknown Account")
+                currency = account_data.get("currency", "EUR")
+
+                # Get balance
+                balance_list = balances.get("balances", [])
+                balance = 0.0
+                if balance_list:
+                    balance = float(
+                        balance_list[0].get("balanceAmount", {}).get("amount", 0.0)
+                    )
+
+                # Check if account already exists by external_id (bank's account ID)
+                existing_account = self.account_repo.get_by_external_id(account_id)
+                if existing_account:
+                    # Update existing account
+                    existing_account.balance = balance
+                    existing_account.name = account_name
+                    existing_account.bank_name = bank_name
+                    existing_account.iban = iban or existing_account.iban
+                    self.account_repo.update(existing_account)
+                else:
+                    # Create new account
+                    new_account = AccountDB(
+                        user_id=self.user_id,
+                        external_id=account_id,
+                        name=account_name,
+                        iban=iban or None,
+                        balance=balance,
+                        currency=currency,
+                        bank_name=bank_name,
+                    )
+                    self.account_repo.create(new_account)
+            except Exception as e:
+                # Log error but continue with other accounts
+                print(f"Error saving account {account_id} to database: {str(e)}")
 
     def reset_setup(self) -> None:
         """

@@ -121,7 +121,9 @@ class ConfigService:
 
     def get_selected_accounts(self) -> List[str]:
         """
-        Get the list of selected account IDs.
+        DEPRECATED: Use database queries instead.
+        Get the list of selected account IDs from config.
+        This is kept for backward compatibility but accounts should be queried from DB.
 
         Returns:
             List of account IDs
@@ -186,23 +188,40 @@ class ConfigService:
         tokens: Dict,
         requisition_id: str,
         institution_id: str,
-        selected_accounts: List[str],
+        country_code: str = "GB",
     ) -> None:
         """
         Create a complete configuration after setup.
+        Note: Accounts are stored in the database, not in config.
 
         Args:
             tokens: Authentication tokens
             requisition_id: GoCardless requisition ID
             institution_id: Bank institution ID
-            selected_accounts: List of selected account IDs
+            country_code: Country code for the institution
         """
         config = {
             "tokens": tokens,
             "requisition_id": requisition_id,
             "institution_id": institution_id,
-            "selected_accounts": selected_accounts,
+            "country_code": country_code,
             "setup_complete": True,
             "setup_date": datetime.now().isoformat(),
         }
         self.save_config(config)
+
+    def get_country_code(self) -> Optional[str]:
+        """
+        Get the country code from config.
+
+        Returns:
+            Country code or None if not found
+        """
+        if not self.config_exists():
+            return None
+
+        try:
+            config = self.load_config()
+            return config.get("country_code")
+        except (ConfigNotFoundError, InvalidConfigError):
+            return None

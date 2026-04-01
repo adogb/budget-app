@@ -1,5 +1,10 @@
+{% extends "setup/setup_base.html" %}
+
+{% block title %}Select Your Bank - Setup{% endblock %}
+
+{% block content %}
 <!-- Bank Selection Step -->
-<div id="bank-selection" class="space-y-6" data-setup-step="institutions">
+<div id="setup-step-content" class="space-y-6" data-step="institutions" data-step-label="Step 2 of 4" data-progress="50">
     <div class="flex items-center space-x-2 text-sm">
         <span class="text-indigo-600 font-medium">Step 2: Select Your Bank</span>
     </div>
@@ -17,60 +22,28 @@
     <div class="mt-4 max-h-80 overflow-y-auto pr-2">
         <div id="banks-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {% for bank in institutions %}
-            <div class="bank-item border rounded-lg p-4 hover:bg-gray-50 transition cursor-pointer"
-                 hx-post="/setup/start-bank-link/{{ bank.id }}"
-                 hx-target="#bank-selection"
-                 hx-swap="outerHTML"
-                 hx-indicator="#loading-indicator">
-                <div class="flex items-center">
-                    {% if bank.logo %}
-                    <img src="{{ bank.logo }}" alt="{{ bank.name }}" class="w-12 h-12 object-contain mr-4">
-                    {% else %}
-                    <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-4">
-                        <span class="text-gray-500 text-xl">🏦</span>
+            <form method="POST" action="/setup/start-bank-link/{{ bank.id }}?country_code={{ country_code }}" class="bank-item">
+                <button type="submit" class="w-full border rounded-lg p-4 hover:bg-gray-50 transition text-left">
+                    <div class="flex items-center">
+                        {% if bank.logo %}
+                        <img src="{{ bank.logo }}" alt="{{ bank.name }}" class="w-12 h-12 object-contain mr-4">
+                        {% else %}
+                        <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mr-4">
+                            <span class="text-gray-500 text-xl">🏦</span>
+                        </div>
+                        {% endif %}
+                        <span class="font-medium">{{ bank.name }}</span>
                     </div>
-                    {% endif %}
-                    <span class="font-medium">{{ bank.name }}</span>
-                </div>
-            </div>
+                </button>
+            </form>
             {% endfor %}
         </div>
     </div>
     
-    <!-- Loading indicator -->
-    <div id="loading-indicator" class="htmx-indicator flex justify-center py-4">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-    </div>
-    
     <div class="flex justify-between mt-8">
-        <button
-            hx-get="/setup/countries"
-            hx-target="#bank-selection"
-            hx-swap="outerHTML"
-            class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+        <a href="/setup/countries" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
             Back
-        </button>
+        </a>
     </div>
 </div>
-
-<script>
-    // Simple bank search functionality
-    document.addEventListener('htmx:afterSwap', function() {
-        const searchInput = document.getElementById('bank-search');
-        if (searchInput) {
-            searchInput.addEventListener('input', function(e) {
-                const searchTerm = e.target.value.toLowerCase();
-                const bankItems = document.querySelectorAll('.bank-item');
-                
-                bankItems.forEach(item => {
-                    const bankName = item.textContent.toLowerCase();
-                    if (bankName.includes(searchTerm)) {
-                        item.style.display = '';
-                    } else {
-                        item.style.display = 'none';
-                    }
-                });
-            });
-        }
-    });
-</script>
+{% endblock %}
