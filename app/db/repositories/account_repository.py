@@ -22,7 +22,7 @@ class AccountRepository:
         """
         self.db = db
 
-    def get_by_id(self, account_id: int) -> Optional[Account]:
+    def get_by_id(self, account_id: str) -> Optional[Account]:
         """
         Get an account by its ID.
 
@@ -99,7 +99,7 @@ class AccountRepository:
         self.db.refresh(account)
         return account
 
-    def update_balance(self, account_id: int, new_balance: float) -> Optional[Account]:
+    def update_balance(self, account_id: str, new_balance: float) -> Optional[Account]:
         """
         Update the balance of an account.
 
@@ -116,7 +116,7 @@ class AccountRepository:
             return self.update(account)
         return None
 
-    def delete(self, account_id: int) -> bool:
+    def delete(self, account_id: str) -> bool:
         """
         Delete an account.
 

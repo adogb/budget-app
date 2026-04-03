@@ -55,7 +55,7 @@ class AccountService:
         accounts = self.repo.get_all(self.user_id)
         return [self._to_response(acc) for acc in accounts]
 
-    def get_account_by_id(self, account_id: int) -> Optional[AccountResponse]:
+    def get_account_by_id(self, account_id: str) -> Optional[AccountResponse]:
         """
         Get a specific account by ID.
 
