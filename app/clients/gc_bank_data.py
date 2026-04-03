@@ -4,6 +4,15 @@ import requests
 import time
 from requests.auth import AuthBase
 
+from app.clients.gc_bank_data_models import (
+    GCAccountBalances,
+    GCAccountDetailResponse,
+    GCAccountTransactions,
+    GCEndUserAgreement,
+    GCInstitution,
+    GCRequisition,
+)
+
 BASE_URL = "https://bankaccountdata.gocardless.com/api/v2"
 SECRET_ID = os.getenv("NORDIGEN_SECRET_ID")
 SECRET_KEY = os.getenv("NORDIGEN_SECRET_KEY")
@@ -126,7 +135,7 @@ class GoCardlessBankDataClient:
 
         return self.access_token
 
-    def get_institutions(self, country_code):
+    def get_institutions(self, country_code: str) -> list[GCInstitution]:
         url = f"{BASE_URL}/institutions/?country={country_code.lower()}"
         resp = self.session.get(url)
         resp.raise_for_status()
@@ -134,11 +143,11 @@ class GoCardlessBankDataClient:
 
     def create_agreement(
         self,
-        institution_id,
-        max_historical_days=90,
-        access_valid_for_days=90,
-        access_scope=None,
-    ):
+        institution_id: str,
+        max_historical_days: int = 90,
+        access_valid_for_days: int = 90,
+        access_scope: list[str] | None = None,
+    ) -> GCEndUserAgreement:
         if access_scope is None:
             access_scope = ["balances", "details", "transactions"]
         url = f"{BASE_URL}/agreements/enduser/"
@@ -154,12 +163,12 @@ class GoCardlessBankDataClient:
 
     def create_requisition(
         self,
-        redirect_url,
-        institution_id,
-        reference=None,
-        agreement_id=None,
-        user_language="EN",
-    ):
+        redirect_url: str,
+        institution_id: str,
+        reference: str | None = None,
+        agreement_id: str | None = None,
+        user_language: str = "EN",
+    ) -> GCRequisition:
         url = f"{BASE_URL}/requisitions/"
         payload = {
             "redirect": redirect_url,
@@ -173,25 +182,25 @@ class GoCardlessBankDataClient:
         resp.raise_for_status()
         return resp.json()
 
-    def get_requisition(self, requisition_id):
+    def get_requisition(self, requisition_id: str) -> GCRequisition:
         url = f"{BASE_URL}/requisitions/{requisition_id}/"
         resp = self.session.get(url)
         resp.raise_for_status()
         return resp.json()
 
-    def get_account_details(self, account_id):
+    def get_account_details(self, account_id: str) -> GCAccountDetailResponse:
         url = f"{BASE_URL}/accounts/{account_id}/details/"
         resp = self.session.get(url)
         resp.raise_for_status()
         return resp.json()
 
-    def get_account_balances(self, account_id):
+    def get_account_balances(self, account_id: str) -> GCAccountBalances:
         url = f"{BASE_URL}/accounts/{account_id}/balances/"
         resp = self.session.get(url)
         resp.raise_for_status()
         return resp.json()
 
-    def get_account_transactions(self, account_id):
+    def get_account_transactions(self, account_id: str) -> GCAccountTransactions:
         url = f"{BASE_URL}/accounts/{account_id}/transactions/"
         resp = self.session.get(url)
         resp.raise_for_status()

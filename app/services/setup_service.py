@@ -110,10 +110,10 @@ class SetupService:
             for institution in institutions_data:
                 institutions.append(
                     InstitutionData(
-                        id=institution.get("id", ""),
-                        name=institution.get("name", ""),
-                        logo=institution.get("logo", ""),
-                        countries=institution.get("countries", []),
+                        id=institution["id"],
+                        name=institution["name"],
+                        logo=institution["logo"],
+                        countries=institution["countries"],
                     )
                 )
 
@@ -187,7 +187,7 @@ class SetupService:
         for account_id in account_ids:
             try:
                 details = self.bank_client.get_account_details(account_id)
-                account_name = details.get("name", "<unnamed account>")
+                account_name = details["account"].get("name", "Unnamed Account")
 
                 account_details.append(AccountData(id=account_id, name=account_name))
             except Exception as e:
@@ -256,8 +256,8 @@ class SetupService:
         try:
             institutions = self.bank_client.get_institutions(country_code)
             for inst in institutions:
-                if inst.get("id") == institution_id:
-                    bank_name = inst.get("name", "Unknown Bank")
+                if inst["id"] == institution_id:
+                    bank_name = inst["name"]
                     break
         except Exception as e:
             print(f"Error fetching institution name: {str(e)}")
@@ -270,17 +270,17 @@ class SetupService:
                 balances = self.bank_client.get_account_balances(account_id)
 
                 # Extract account information
-                account_data = details.get("account", {})
-                iban = account_data.get("iban", "")
-                account_name = account_data.get("name", "Unknown Account")
-                currency = account_data.get("currency", "EUR")
+                account_data = details["account"]  # required field
+                iban = account_data.get("iban", "")  # NotRequired
+                account_name = account_data.get("name", "Unknown Account")  # NotRequired
+                currency = account_data.get("currency", "EUR")  # NotRequired
 
                 # Get balance
-                balance_list = balances.get("balances", [])
+                balance_list = balances["balances"]  # required field
                 balance = 0.0
                 if balance_list:
                     balance = float(
-                        balance_list[0].get("balanceAmount", {}).get("amount", 0.0)
+                        balance_list[0]["balanceAmount"]["amount"]  # both required
                     )
 
                 # Check if account already exists by external_id (bank's account ID)
