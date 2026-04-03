@@ -6,3 +6,4 @@ jinja2
 black
 ruff
 sqlalchemy
+pytest

@@ -17,6 +17,7 @@ Ignore Post-MVP/multi-user features unless explicitly asked.
 - Run the app in development mode: `fastapi dev`
 - Lint the code: `ruff check`
 - Format the code: `ruff format`
+- Run tests: `pytest`
 
 ## Code style
 
