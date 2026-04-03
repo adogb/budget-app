@@ -47,7 +47,7 @@ class AccountService:
 
     def get_all_accounts(self) -> List[AccountResponse]:
         """
-        Get all user's accounts from local database.
+        Get all user's accounts.
 
         Returns:
             List of AccountResponse objects
@@ -57,7 +57,7 @@ class AccountService:
 
     def get_account_by_id(self, account_id: int) -> Optional[AccountResponse]:
         """
-        Get a specific account by ID from local database.
+        Get a specific account by ID.
 
         Args:
             account_id: The account ID to fetch
@@ -72,7 +72,7 @@ class AccountService:
 
     def get_account_by_iban(self, iban: str) -> Optional[AccountResponse]:
         """
-        Get account by IBAN from local database.
+        Get account by IBAN.
 
         Args:
             iban: The IBAN to search for

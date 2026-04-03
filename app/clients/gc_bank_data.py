@@ -180,7 +180,7 @@ class GoCardlessBankDataClient:
         return resp.json()
 
     def get_account_details(self, account_id):
-        url = f"{BASE_URL}/accounts/{account_id}/"
+        url = f"{BASE_URL}/accounts/{account_id}/details/"
         resp = self.session.get(url)
         resp.raise_for_status()
         return resp.json()
