@@ -24,7 +24,7 @@ class TransactionRepository:
         """
         self.db = db
 
-    def get_by_id(self, transaction_id: int) -> Optional[Transaction]:
+    def get_by_id(self, transaction_id: str) -> Optional[Transaction]:
         """
         Get a transaction by its ID.
 
@@ -68,16 +68,16 @@ class TransactionRepository:
             query = query.filter(Transaction.account_id == account_id)
 
         if from_date:
-            query = query.filter(Transaction.booked_at >= from_date)
+            query = query.filter(Transaction.booking_date >= from_date)
 
         if to_date:
-            query = query.filter(Transaction.booked_at <= to_date)
+            query = query.filter(Transaction.booking_date <= to_date)
 
         if category_id:
             query = query.filter(Transaction.category_id == category_id)
 
         # Order by booking date (newest first)
-        query = query.order_by(desc(Transaction.booked_at))
+        query = query.order_by(desc(Transaction.booking_date))
 
         # Apply limit if specified
         if limit:
@@ -101,7 +101,7 @@ class TransactionRepository:
         query = (
             self.db.query(Transaction)
             .filter(Transaction.account_id == account_id)
-            .order_by(desc(Transaction.booked_at))
+            .order_by(desc(Transaction.booking_date))
         )
 
         if limit:
@@ -128,11 +128,11 @@ class TransactionRepository:
             .filter(
                 and_(
                     Transaction.user_id == user_id,
-                    Transaction.booked_at >= from_date,
-                    Transaction.booked_at <= to_date,
+                    Transaction.booking_date >= from_date,
+                    Transaction.booking_date <= to_date,
                 )
             )
-            .order_by(desc(Transaction.booked_at))
+            .order_by(desc(Transaction.booking_date))
             .all()
         )
 
@@ -182,7 +182,7 @@ class TransactionRepository:
         return transaction
 
     def update_category(
-        self, transaction_id: int, category_id: Optional[int]
+        self, transaction_id: str, category_id: Optional[int]
     ) -> Optional[Transaction]:
         """
         Update the category of a transaction.
@@ -200,7 +200,7 @@ class TransactionRepository:
             return self.update(transaction)
         return None
 
-    def delete(self, transaction_id: int) -> bool:
+    def delete(self, transaction_id: str) -> bool:
         """
         Delete a transaction.
 
@@ -232,7 +232,7 @@ class TransactionRepository:
             .filter(
                 and_(Transaction.user_id == user_id, Transaction.category_id.is_(None))
             )
-            .order_by(desc(Transaction.booked_at))
+            .order_by(desc(Transaction.booking_date))
             .all()
         )
 

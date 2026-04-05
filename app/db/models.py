@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Optional
+from uuid import uuid4
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -112,19 +113,26 @@ class Account(Base):
 class Transaction(Base):
     __tablename__ = "transactions"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"), nullable=False)
     category_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("categories.id"), nullable=True
     )
+    external_id: Mapped[Optional[str]] = mapped_column(
+        String(100), nullable=True
+    )  # Bank's transaction ID
 
     # store money in cents as integer to avoid float issues
     amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="DKK")
 
     description: Mapped[str] = mapped_column(String(255), nullable=False)
-    comment: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    booked_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    notes: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    booking_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    value_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     account: Mapped[Account] = relationship(back_populates="transactions")
     category: Mapped[Optional[Category]] = relationship(back_populates="transactions")
