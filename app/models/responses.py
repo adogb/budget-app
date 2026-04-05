@@ -18,12 +18,13 @@ class AccountResponse(BaseModel):
 
 class TransactionResponse(BaseModel):
     """Response model for transaction data."""
-    
+
     id: str
     account_id: str
     amount: float
     currency: str
     description: str
+    notes: Optional[str] = None
     booking_date: date
     value_date: Optional[date] = None
     category: Optional[str] = None

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Transactions - Budget App{% endblock %}
+
+{% block head %}
+<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-6 py-8">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-semibold text-gray-900">Transactions</h1>
+        <p class="text-gray-600 mt-1">View and manage your transactions</p>
+    </div>
+
+    <!-- Filters (optional - for future enhancement) -->
+    <div class="mb-6 flex gap-4">
+        <select class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="">All Accounts</option>
+            {% for account in accounts %}
+            <option value="{{ account.id }}" {% if selected_account_id == account.id %}selected{% endif %}>
+                {{ account.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <table class="w-full">
+            <thead>
+                <tr class="bg-gray-50 border-b border-gray-200">
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date
+                    </th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Description
+                    </th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Category
+                    </th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Notes
+                    </th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Amount
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% if transactions %}
+                    {% for transaction in transactions %}
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                            {{ transaction.booking_date.strftime('%d.%m.%Y') }}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-900">
+                            {{ transaction.description }}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-600">
+                            {% if transaction.category %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                {{ transaction.category }}
+                            </span>
+                            {% else %}
+                            <span class="text-gray-400 italic">Uncategorized</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-600"
+                            hx-get="/transactions/{{ transaction.id }}/notes-edit"
+                            hx-trigger="click"
+                            hx-swap="outerHTML">
+                            <span class="cursor-pointer hover:text-indigo-600">
+                                {% if transaction.notes %}
+                                {{ transaction.notes }}
+                                {% else %}
+                                <span class="text-gray-400 italic">Add note...</span>
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
+                            <span class="font-medium {% if transaction.amount >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                                {{ "{:,.2f}".format(transaction.amount) }}
+                            </span>
+                            <span class="text-gray-500 ml-1">{{ transaction.currency }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                            <div class="flex flex-col items-center">
+                                <svg class="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <p class="text-lg font-medium">No transactions found</p>
+                                <p class="text-sm text-gray-400 mt-1">Transactions will appear here once you sync your accounts</p>
+                            </div>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

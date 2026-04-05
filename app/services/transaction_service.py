@@ -42,10 +42,11 @@ class TransactionService:
             id=str(transaction.id),
             account_id=str(transaction.account_id),
             amount=transaction.amount_cents / 100.0,  # Convert cents to currency
-            currency=transaction.account.currency,
+            currency=transaction.currency,
             description=transaction.description,
-            booking_date=transaction.booked_at.date(),
-            value_date=transaction.booked_at.date(),
+            notes=transaction.notes,
+            booking_date=transaction.booking_date.date(),
+            value_date=transaction.value_date.date() if transaction.value_date else None,
             category=transaction.category.name if transaction.category else None,
         )
 
@@ -108,8 +109,23 @@ class TransactionService:
         transactions = self.repo.get_uncategorized(self.user_id)
         return [self._to_response(tx) for tx in transactions]
 
+    def get_transaction_by_id(self, transaction_id: str) -> Optional[TransactionResponse]:
+        """
+        Get a single transaction by ID.
+
+        Args:
+            transaction_id: The transaction ID
+
+        Returns:
+            TransactionResponse or None if not found
+        """
+        transaction = self.repo.get_by_id(transaction_id)
+        if transaction:
+            return self._to_response(transaction)
+        return None
+
     def update_transaction_category(
-        self, transaction_id: int, category_id: Optional[int]
+        self, transaction_id: str, category_id: Optional[int]
     ) -> Optional[TransactionResponse]:
         """
         Update the category of a transaction.
@@ -124,4 +140,24 @@ class TransactionService:
         transaction = self.repo.update_category(transaction_id, category_id)
         if transaction:
             return self._to_response(transaction)
+        return None
+
+    def update_transaction_notes(
+        self, transaction_id: str, notes: str
+    ) -> Optional[TransactionResponse]:
+        """
+        Update the notes of a transaction.
+
+        Args:
+            transaction_id: The transaction ID
+            notes: The new notes text
+
+        Returns:
+            Updated TransactionResponse or None if not found
+        """
+        transaction = self.repo.get_by_id(transaction_id)
+        if transaction:
+            transaction.notes = notes
+            updated = self.repo.update(transaction)
+            return self._to_response(updated)
         return None
