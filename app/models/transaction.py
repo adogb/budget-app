@@ -2,7 +2,8 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import date
 
-
+# Not used at the moment, using TransactionResponse instead
+# might be useful later
 class Transaction(BaseModel):
     id: str
     account_id: str
