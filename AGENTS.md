@@ -14,10 +14,20 @@ Ignore Post-MVP/multi-user features unless explicitly asked.
 - Frontend: HTMX + Jinja2 templates + Tailwind CSS
 
 ## Commands
+- Activate the virtual environment: `source .venv/bin/activate`
 - Run the app in development mode: `fastapi dev`
 - Lint the code: `ruff check`
 - Format the code: `ruff format`
 - Run tests: `pytest`
+
+### Database Migrations (Alembic)
+- Initialize Alembic: `alembic init alembic`
+- Create new migration (auto-detect changes): `alembic revision --autogenerate -m "description"`
+- Create empty migration (manual): `alembic revision -m "description"`
+- Apply all pending migrations: `alembic upgrade head`
+- Rollback last migration: `alembic downgrade -1`
+- Show current migration version: `alembic current`
+- Show migration history: `alembic history`
 
 ## Code style
 
