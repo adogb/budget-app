@@ -200,30 +200,22 @@ class GoCardlessBankDataClient:
         resp.raise_for_status()
         return resp.json()
 
-    def get_account_transactions(self, account_id: str) -> GCAccountTransactions:
-        url = f"{BASE_URL}/accounts/{account_id}/transactions/"
-        resp = self.session.get(url)
-        resp.raise_for_status()
-        return resp.json()
-
-    def get_account_transactions_paginated(
-        self, account_id, date_from=None, date_to=None, limit=100, offset=0
-    ):
+    def get_account_transactions(
+        self, account_id: str, date_from: str | None = None, date_to: str | None = None
+    ) -> GCAccountTransactions:
         """
-        Get account transactions with pagination support.
+        Get account transactions with optional date filtering.
 
         Args:
             account_id (str): The account ID to get transactions for
             date_from (str, optional): Filter transactions from this date (ISO format: YYYY-MM-DD)
             date_to (str, optional): Filter transactions to this date (ISO format: YYYY-MM-DD)
-            limit (int, optional): Number of transactions to return per page (default: 100)
-            offset (int, optional): Offset for pagination (default: 0)
 
         Returns:
-            dict: Transaction data with pagination information
+            dict: Transaction data including booked and pending transactions
         """
         url = f"{BASE_URL}/accounts/{account_id}/transactions/"
-        params = {"limit": limit, "offset": offset}
+        params = {}
 
         if date_from:
             params["date_from"] = date_from
@@ -233,46 +225,6 @@ class GoCardlessBankDataClient:
         resp = self.session.get(url, params=params)
         resp.raise_for_status()
         return resp.json()
-
-    def get_all_account_transactions(
-        self, account_id, date_from=None, date_to=None, batch_size=100
-    ):
-        """
-        Get all transactions for an account by handling pagination automatically.
-
-        Args:
-            account_id (str): The account ID to get transactions for
-            date_from (str, optional): Filter transactions from this date (ISO format: YYYY-MM-DD)
-            date_to (str, optional): Filter transactions to this date (ISO format: YYYY-MM-DD)
-            batch_size (int, optional): Number of transactions to fetch per request (default: 100)
-
-        Returns:
-            list: All transactions for the account
-        """
-        all_transactions = []
-        offset = 0
-
-        while True:
-            result = self.get_account_transactions_paginated(
-                account_id, date_from, date_to, batch_size, offset
-            )
-
-            # Extract transactions from the response
-            transactions = result.get("transactions", {})
-            booked = transactions.get("booked", [])
-            pending = transactions.get("pending", [])
-
-            all_transactions.extend(booked)
-            all_transactions.extend(pending)
-
-            # If we got fewer transactions than the batch size, we've reached the end
-            if len(booked) + len(pending) < batch_size:
-                break
-
-            # Update offset for the next batch
-            offset += batch_size
-
-        return all_transactions
 
     def get_token_status(self):
         """
