@@ -3,7 +3,7 @@ Repository for Transaction database operations.
 Handles CRUD and queries for financial transactions.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import List, Optional
 
 from sqlalchemy import and_, desc
@@ -251,3 +251,38 @@ class TransactionRepository:
             .filter(Transaction.account_id == account_id)
             .count()
         )
+
+    def exists_by_bank_transaction_id(self, bank_transaction_id: str) -> bool:
+        """
+        Check if a transaction with the given bank transaction ID exists.
+
+        Args:
+            bank_transaction_id: The bank's transaction ID
+
+        Returns:
+            True if transaction exists, False otherwise
+        """
+        return (
+            self.db.query(Transaction)
+            .filter(Transaction.bank_transaction_id == bank_transaction_id)
+            .count()
+            > 0
+        )
+
+    def get_latest_transaction_date(self, account_id: int) -> Optional[date]:
+        """
+        Get the most recent transaction booking date for an account.
+
+        Args:
+            account_id: The account ID
+
+        Returns:
+            The latest booking_date (as date object), or None if no transactions exist
+        """
+        result = (
+            self.db.query(Transaction.booking_date)
+            .filter(Transaction.account_id == account_id)
+            .order_by(desc(Transaction.booking_date))
+            .first()
+        )
+        return result[0] if result else None

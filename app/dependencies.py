@@ -6,6 +6,7 @@ from app.services.config_service import ConfigService
 from app.services.account_service import AccountService
 from app.services.transaction_service import TransactionService
 from app.services.setup_service import SetupService
+from app.services.sync_service import SyncService
 from app.db.database import get_db
 from fastapi.templating import Jinja2Templates
 
@@ -82,3 +83,14 @@ def get_setup_service(
     return SetupService(
         bank_client=bank_client, config_service=config_service, db_session=db, user_id=1
     )
+
+
+def get_sync_service(
+    db: Session = Depends(get_db),
+    bank_client: GoCardlessBankDataClient = Depends(get_bank_client),
+) -> SyncService:
+    """
+    Get the SyncService instance.
+    Creates a new instance on each request with database session.
+    """
+    return SyncService(db_session=db, bank_client=bank_client, user_id=1)
