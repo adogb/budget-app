@@ -14,8 +14,8 @@
         <p class="text-gray-600 mt-1">View and manage your transactions</p>
     </div>
 
-    <!-- Filters (optional - for future enhancement) -->
-    <div class="mb-6 flex gap-4">
+    <!-- Filters and Sync Button -->
+    <div class="mb-6 flex gap-4 items-center">
         <select class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             <option value="">All Accounts</option>
             {% for account in accounts %}
@@ -24,6 +24,34 @@
             </option>
             {% endfor %}
         </select>
+
+        <!-- Sync Button -->
+        <button
+            class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            hx-post="/accounts/sync"
+            hx-target="#transaction-table-body"
+            hx-swap="innerHTML"
+            hx-indicator="#sync-spinner"
+            title="Syncing may take 30-60 seconds for large transaction histories">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Sync Accounts
+        </button>
+
+        <!-- Loading Spinner -->
+        <div id="sync-spinner" class="htmx-indicator flex items-center gap-2">
+            <svg class="animate-spin h-5 w-5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-sm text-gray-600">Syncing...</span>
+        </div>
+
+        <!-- Sync Status -->
+        <div id="sync-status" class="ml-auto">
+            <!-- Status will be updated via HTMX -->
+        </div>
     </div>
 
     <!-- Transactions Table -->
@@ -48,44 +76,10 @@
                     </th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200">
+            <tbody id="transaction-table-body" class="divide-y divide-gray-200">
                 {% if transactions %}
                     {% for transaction in transactions %}
-                    <tr class="hover:bg-gray-50 transition">
-                        <td class="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
-                            {{ transaction.booking_date.strftime('%d.%m.%Y') }}
-                        </td>
-                        <td class="px-4 py-3 text-sm text-gray-900">
-                            {{ transaction.description }}
-                        </td>
-                        <td class="px-4 py-3 text-sm text-gray-600">
-                            {% if transaction.category %}
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                                {{ transaction.category }}
-                            </span>
-                            {% else %}
-                            <span class="text-gray-400 italic">Uncategorized</span>
-                            {% endif %}
-                        </td>
-                        <td class="px-4 py-3 text-sm text-gray-600"
-                            hx-get="/transactions/{{ transaction.id }}/notes-edit"
-                            hx-trigger="click"
-                            hx-swap="outerHTML">
-                            <span class="cursor-pointer hover:text-indigo-600">
-                                {% if transaction.notes %}
-                                {{ transaction.notes }}
-                                {% else %}
-                                <span class="text-gray-400 italic">Add note...</span>
-                                {% endif %}
-                            </span>
-                        </td>
-                        <td class="px-4 py-3 text-sm text-right whitespace-nowrap">
-                            <span class="font-medium {% if transaction.amount >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
-                                {{ "{:,.2f}".format(transaction.amount) }}
-                            </span>
-                            <span class="text-gray-500 ml-1">{{ transaction.currency }}</span>
-                        </td>
-                    </tr>
+                        {% include "transactions/_transaction_row.html" %}
                     {% endfor %}
                 {% else %}
                     <tr>
