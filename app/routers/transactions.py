@@ -36,22 +36,6 @@ def transactions_page(
         }
     )
 
-
-@router.get("/api", response_model=List[TransactionResponse])
-def list_transactions_api(
-    account_id: Optional[str] = None,
-    from_date: Optional[date] = Query(None),
-    to_date: Optional[date] = Query(None),
-    transaction_service: TransactionService = Depends(get_transaction_service),
-):
-    """List transactions with optional filtering (API endpoint)"""
-    return transaction_service.get_transactions(
-        account_id=account_id,
-        from_date=from_date,
-        to_date=to_date
-    )
-
-
 @router.patch("/{transaction_id}/notes", response_class=HTMLResponse)
 def update_transaction_notes(
     transaction_id: str,
