@@ -1,11 +1,11 @@
 # models.py (SQLAlchemy 2.0 style)
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -121,9 +121,6 @@ class Transaction(Base):
     category_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("categories.id"), nullable=True
     )
-    external_id: Mapped[Optional[str]] = mapped_column(
-        String(100), nullable=True
-    )  # Bank's transaction ID
 
     # store money in cents as integer to avoid float issues
     amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -131,8 +128,15 @@ class Transaction(Base):
 
     description: Mapped[str] = mapped_column(String(255), nullable=False)
     notes: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    booking_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    value_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    booking_date: Mapped[date] = mapped_column(Date, nullable=False)
+    value_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+
+    bank_transaction_id: Mapped[Optional[str]] = mapped_column(
+        String(100), nullable=True
+    )  # Bank's transaction ID
+    gc_transaction_id: Mapped[Optional[str]] = mapped_column(
+        String(100), nullable=True
+    )  # GoCardless transaction ID
 
     account: Mapped[Account] = relationship(back_populates="transactions")
     category: Mapped[Optional[Category]] = relationship(back_populates="transactions")

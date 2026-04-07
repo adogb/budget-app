@@ -45,8 +45,8 @@ class TransactionService:
             currency=transaction.currency,
             description=transaction.description,
             notes=transaction.notes,
-            booking_date=transaction.booking_date.date(),
-            value_date=transaction.value_date.date() if transaction.value_date else None,
+            booking_date=transaction.booking_date,
+            value_date=transaction.value_date,
             category=transaction.category.name if transaction.category else None,
         )
 
