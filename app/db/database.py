@@ -8,7 +8,7 @@ Single-user budget app with local SQLite database.
 
 
 # SQLite database file path
-DATABASE_URL = "sqlite:///./budget.db"
+DATABASE_URL = "sqlite:///./db/budget.db"
 
 # Create engine
 # check_same_thread=False is needed for SQLite with FastAPI

@@ -24,4 +24,5 @@ project_requirements.md
 .github/instructions/
 
 # Database files
-*.db
+db/*.db
+db/backups/
