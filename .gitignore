@@ -23,6 +23,9 @@ project_requirements.md
 # Github Copilot instructions
 .github/instructions/
 
+# Playwright CLI artifacts
+.playwright-cli/
+
 # Database files
 db/*.db
 db/backups/
