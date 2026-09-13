@@ -1,5 +1,9 @@
+from pathlib import Path
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+from app.db.models import Base
 
 """
 Database session and engine setup for SQLite.
@@ -40,8 +44,5 @@ def init_db():
     Initialize database tables.
     Call this on app startup to create all tables defined by Base.
     """
-    # Import models to register them with Base
-    from app.db.models import Base
-
-    # Create all tables that inherit from Base and are not yet created
+    Path("db").mkdir(exist_ok=True)
     Base.metadata.create_all(bind=engine)
