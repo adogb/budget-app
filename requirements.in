@@ -1,9 +1,0 @@
-fastapi[standard]
-pydantic
-nordigen
-python-dotenv
-jinja2
-black
-ruff
-sqlalchemy
-pytest
