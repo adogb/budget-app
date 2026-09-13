@@ -117,36 +117,6 @@ class BankIntegrationRepository:
         self.db.refresh(integration)
         return integration
 
-    def update_tokens(
-        self,
-        integration_id: int,
-        access_token: str,
-        refresh_token: str,
-        access_valid_days: int = 90,
-        refresh_valid_days: int = 90,
-    ) -> BankIntegration | None:
-        """
-        Update tokens for a bank integration.
-
-        Args:
-            integration_id: The integration ID
-            access_token: New access token
-            refresh_token: New refresh token
-            access_valid_days: Days until access token expires
-            refresh_valid_days: Days until refresh token expires
-
-        Returns:
-            Updated BankIntegration object or None if not found
-        """
-        integration = self.get_by_id(integration_id)
-        if integration:
-            integration.access_token = access_token
-            integration.refresh_token = refresh_token
-            integration.access_valid_days = access_valid_days
-            integration.refresh_valid_days = refresh_valid_days
-            return self.update(integration)
-        return None
-
     def delete(self, integration_id: int) -> bool:
         """
         Delete a bank integration.

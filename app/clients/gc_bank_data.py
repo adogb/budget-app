@@ -252,57 +252,6 @@ class GoCardlessBankDataClient:
             and now < self.refresh_expires,
         }
 
-    def save_tokens_to_dict(self):
-        """
-        Save token information to a dictionary for persistence.
-
-        Returns:
-            dict: Token information for storage
-        """
-        return {
-            "access_token": self.access_token,
-            "refresh_token": self.refresh_token,
-            "token_expires": self.token_expires,
-            "refresh_expires": self.refresh_expires,
-        }
-
-    def load_tokens_from_dict(self, token_data):
-        """
-        Load token information from a dictionary.
-
-        Args:
-            token_data (dict): Token information retrieved from storage
-
-        Returns:
-            bool: True if tokens were loaded successfully, False otherwise
-        """
-        if not token_data:
-            return False
-
-        self.access_token = token_data.get("access_token")
-        self.refresh_token = token_data.get("refresh_token")
-        self.token_expires = token_data.get("token_expires", 0)
-        self.refresh_expires = token_data.get("refresh_expires", 0)
-
-        # Validate that tokens are still valid
-        now = int(time.time())
-        if not self.access_token or now >= (
-            self.token_expires - self.token_refresh_buffer
-        ):
-            # Try to refresh the token
-            try:
-                self.ensure_valid_token()
-                return True
-            except Exception:
-                # Reset tokens and return False
-                self.access_token = None
-                self.refresh_token = None
-                self.token_expires = 0
-                self.refresh_expires = 0
-                return False
-
-        return True
-
     def close(self):
         """Close the session when done to free resources."""
         self.session.close()

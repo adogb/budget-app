@@ -28,21 +28,6 @@ async def setup_home(
     )
 
 
-# @router.get("/api/status")
-# async def get_setup_status(
-#     request: Request, config_service: ConfigService = Depends(get_config_service)
-# ):
-#     """API endpoint to check if the initial setup has been completed"""
-#     if config_service.is_setup_complete():
-#         return templates.TemplateResponse(
-#             "setup/status.html", {"request": request, "status": "configured"}
-#         )
-
-#     return templates.TemplateResponse(
-#         "setup/status.html", {"request": request, "status": "not_configured"}
-#     )
-
-
 @router.get("/countries", response_model=None)
 async def get_countries(
     request: Request, setup_service: SetupService = Depends(get_setup_service)
@@ -91,13 +76,13 @@ async def start_bank_link(
     # Create bank link
     link_data = setup_service.create_bank_link(institution_id, callback_url)
 
-    # Delete any old pending integrations for this user before creating new one
+    # Starting a new link supersedes any prior one. Delete existing integrations
+    # for this user so an abandoned requisition can't linger as orphaned data.
+    # Saved accounts are keyed by the bank's external_id and are untouched;
+    # re-completing setup updates them in place.
     repo = BankIntegrationRepository(db)
-    old_integrations = repo.get_by_user_id(DEFAULT_USER_ID)
-    for old in old_integrations:
-        # Only delete if it doesn't have tokens (i.e., not completed)
-        if not old.access_token:
-            repo.delete(old.id)
+    for old in repo.get_by_user_id(DEFAULT_USER_ID):
+        repo.delete(old.id)
 
     # Store new requisition data in database
     from app.db.models import BankIntegration
@@ -204,18 +189,14 @@ async def complete_setup(
 @router.post("/reset")
 async def reset_setup(
     request: Request,
-    setup_service: SetupService = Depends(get_setup_service),
     db: Session = Depends(get_db),
 ):
-    """Reset the setup process by deleting bank integrations and config"""
+    """Reset the setup process by deleting bank integrations"""
     # Delete all bank integrations for this user
     repo = BankIntegrationRepository(db)
     integrations = repo.get_by_user_id(DEFAULT_USER_ID)
     for integration in integrations:
         repo.delete(integration.id)
-
-    # Reset setup (clears config file)
-    setup_service.reset_setup()
 
     # Redirect to setup start
     return RedirectResponse(url="/setup", status_code=303)

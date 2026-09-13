@@ -12,7 +12,6 @@ from app.db.models import Account as AccountDB
 from app.db.models import BankIntegration as BankIntegrationDB
 from app.db.repositories.account_repository import AccountRepository
 from app.db.repositories.bank_integration_repository import BankIntegrationRepository
-from app.services.config_service import ConfigService
 from app.services.exceptions import BankAPIError
 
 
@@ -62,7 +61,6 @@ class SetupService:
     def __init__(
         self,
         bank_client: GoCardlessBankDataClient,
-        config_service: ConfigService,
         db_session: Session,
         user_id: int = 1,
     ):
@@ -71,12 +69,10 @@ class SetupService:
 
         Args:
             bank_client: Client for bank API operations
-            config_service: Service for config operations (deprecated, will be removed)
             db_session: Database session for saving accounts
             user_id: The user ID (default 1 for MVP single-user)
         """
         self.bank_client = bank_client
-        self.config_service = config_service
         self.account_repo = AccountRepository(db_session)
         self.integration_repo = BankIntegrationRepository(db_session)
         self.user_id = user_id
@@ -212,10 +208,9 @@ class SetupService:
             selected_account_ids: List of selected account IDs
             country_code: Country code for the institution
         """
-        # Get tokens from bank client
-        token_data = self.bank_client.save_tokens_to_dict()
-
-        # Save bank integration to database
+        # Save bank integration to database. Access/refresh tokens are not stored:
+        # they are app-level credentials the bank client mints on demand from the
+        # configured secrets, not per-integration data.
         existing_integration = self.integration_repo.get_by_requisition_id(
             requisition_id
         )
@@ -225,31 +220,8 @@ class SetupService:
                 institution_id=institution_id,
                 country_code=country_code,
                 requisition_id=requisition_id,
-                access_token=token_data.get("access"),
-                refresh_token=token_data.get("refresh"),
-                access_valid_days=token_data.get("access_expires", 90),
-                refresh_valid_days=token_data.get("refresh_expires", 90),
             )
             self.integration_repo.create(integration)
-        else:
-            # Update existing integration tokens
-            existing_integration.access_token = token_data.get("access")
-            existing_integration.refresh_token = token_data.get("refresh")
-            existing_integration.access_valid_days = token_data.get(
-                "access_expires", 90
-            )
-            existing_integration.refresh_valid_days = token_data.get(
-                "refresh_expires", 90
-            )
-            self.integration_repo.update(existing_integration)
-
-        # Also save to config file for backward compatibility (will remove later)
-        self.config_service.create_complete_config(
-            tokens=token_data,
-            requisition_id=requisition_id,
-            institution_id=institution_id,
-            country_code=country_code,
-        )
 
         # Get institution name
         bank_name = "Unknown Bank"
@@ -309,9 +281,3 @@ class SetupService:
             except Exception as e:
                 # Log error but continue with other accounts
                 print(f"Error saving account {account_id} to database: {e!s}")
-
-    def reset_setup(self) -> None:
-        """
-        Reset the setup by deleting configuration.
-        """
-        self.config_service.delete_config()

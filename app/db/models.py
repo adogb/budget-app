@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from uuid import uuid4
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -47,16 +47,6 @@ class BankIntegration(Base):
     # GoCardless/Nordigen requisition details
     requisition_id: Mapped[str] = mapped_column(
         String(100), nullable=False, unique=True
-    )
-
-    # Access tokens (in production, these should be encrypted)
-    access_token: Mapped[str | None] = mapped_column(Text, nullable=True)
-    refresh_token: Mapped[str | None] = mapped_column(Text, nullable=True)
-    access_valid_days: Mapped[int | None] = mapped_column(
-        Integer, nullable=True, default=90
-    )
-    refresh_valid_days: Mapped[int | None] = mapped_column(
-        Integer, nullable=True, default=90
     )
 
     # Timestamps

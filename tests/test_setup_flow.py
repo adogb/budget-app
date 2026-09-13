@@ -11,7 +11,6 @@ from sqlalchemy.orm import sessionmaker
 from app.db.models import BankIntegration, Base, User
 from app.db.repositories.account_repository import AccountRepository
 from app.db.repositories.bank_integration_repository import BankIntegrationRepository
-from app.services.config_service import ConfigService
 from app.services.setup_service import SetupService
 
 
@@ -70,29 +69,14 @@ def mock_bank_client() -> Mock:
             }
         ]
     }
-    client.save_tokens_to_dict.return_value = {
-        "access": "test-access-token",
-        "refresh": "test-refresh-token",
-        "access_expires": 90,
-        "refresh_expires": 90,
-    }
     return client
 
 
 @pytest.fixture
-def mock_config_service(tmp_path) -> ConfigService:
-    """Create a mock config service using temp directory."""
-    config_dir = tmp_path / "config"
-    config_dir.mkdir()
-    return ConfigService(config_dir=str(config_dir))
-
-
-@pytest.fixture
-def setup_service(db_session, mock_bank_client, mock_config_service) -> SetupService:
+def setup_service(db_session, mock_bank_client) -> SetupService:
     """Create a setup service with mocked dependencies."""
     return SetupService(
         bank_client=mock_bank_client,
-        config_service=mock_config_service,
         db_session=db_session,
         user_id=1,
     )
@@ -110,10 +94,6 @@ class TestBankIntegrationRepository:
             institution_id="SANDBOXFINANCE_SFIN0000",
             country_code="GB",
             requisition_id="test-req-123",
-            access_token="access-token",
-            refresh_token="refresh-token",
-            access_valid_days=90,
-            refresh_valid_days=90,
         )
 
         created = repo.create(integration)
@@ -122,7 +102,6 @@ class TestBankIntegrationRepository:
         assert created.user_id == 1
         assert created.institution_id == "SANDBOXFINANCE_SFIN0000"
         assert created.requisition_id == "test-req-123"
-        assert created.access_token == "access-token"
 
     def test_get_by_requisition_id(self, db_session):
         """Test retrieving integration by requisition ID."""
@@ -133,8 +112,6 @@ class TestBankIntegrationRepository:
             institution_id="SANDBOXFINANCE_SFIN0000",
             country_code="GB",
             requisition_id="unique-req-456",
-            access_token="token",
-            refresh_token="refresh",
         )
         repo.create(integration)
 
@@ -154,18 +131,13 @@ class TestBankIntegrationRepository:
             institution_id="BANK_OLD",
             country_code="GB",
             requisition_id="old-req",
-            access_token="old-token",
-            refresh_token="old-refresh",
         )
         new = BankIntegration(
             user_id=1,
             institution_id="BANK_NEW",
             country_code="GB",
             requisition_id="new-req",
-            access_token="new-token",
-            refresh_token="new-refresh",
         )
-        print(old.created_at, new.created_at)
         repo.create(old)
         repo.create(new)
 
@@ -173,33 +145,6 @@ class TestBankIntegrationRepository:
 
         assert active is not None
         assert active.institution_id == "BANK_NEW"
-
-    def test_update_tokens(self, db_session):
-        """Test updating tokens for an integration."""
-        repo = BankIntegrationRepository(db_session)
-
-        integration = BankIntegration(
-            user_id=1,
-            institution_id="BANK",
-            country_code="GB",
-            requisition_id="req-123",
-            access_token="old-access",
-            refresh_token="old-refresh",
-        )
-        created = repo.create(integration)
-
-        updated = repo.update_tokens(
-            created.id,
-            "new-access",
-            "new-refresh",
-            access_valid_days=180,
-            refresh_valid_days=180,
-        )
-
-        assert updated is not None
-        assert updated.access_token == "new-access"
-        assert updated.refresh_token == "new-refresh"
-        assert updated.access_valid_days == 180
 
 
 class TestSetupService:
@@ -281,8 +226,6 @@ class TestSetupService:
         assert integration.user_id == 1
         assert integration.institution_id == "SANDBOXFINANCE_SFIN0000"
         assert integration.country_code == "GB"
-        assert integration.access_token == "test-access-token"
-        assert integration.refresh_token == "test-refresh-token"
 
         # Check accounts were created
         account_repo = AccountRepository(db_session)
@@ -297,7 +240,7 @@ class TestSetupService:
     def test_complete_setup_updates_existing_integration(
         self, setup_service, db_session, mock_bank_client
     ):
-        """Test that complete_setup updates existing integration instead of creating duplicate."""
+        """complete_setup must not create a duplicate for an existing requisition."""
         # Create an existing integration
         integration_repo = BankIntegrationRepository(db_session)
         existing = BankIntegration(
@@ -305,8 +248,6 @@ class TestSetupService:
             institution_id="SANDBOXFINANCE_SFIN0000",
             country_code="GB",
             requisition_id="test-req-123",
-            access_token="old-token",
-            refresh_token="old-refresh",
         )
         integration_repo.create(existing)
 
@@ -326,11 +267,10 @@ class TestSetupService:
             country_code="GB",
         )
 
-        # Check that integration was updated, not duplicated
+        # Check that the existing integration was reused, not duplicated
         integrations = integration_repo.get_by_user_id(1)
         assert len(integrations) == 1
-        assert integrations[0].access_token == "test-access-token"  # Updated
-        assert integrations[0].refresh_token == "test-refresh-token"  # Updated
+        assert integrations[0].requisition_id == "test-req-123"
 
 
 class TestCompleteSetupFlow:
