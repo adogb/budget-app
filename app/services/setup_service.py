@@ -4,16 +4,16 @@ Service for managing setup workflow.
 Handles business logic for initial bank connection and configuration.
 """
 
-from typing import List, Dict, Optional
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.clients.gc_bank_data import GoCardlessBankDataClient
-from app.services.config_service import ConfigService
-from app.services.exceptions import BankAPIError
+from app.db.models import Account as AccountDB
+from app.db.models import BankIntegration as BankIntegrationDB
 from app.db.repositories.account_repository import AccountRepository
 from app.db.repositories.bank_integration_repository import BankIntegrationRepository
-from app.db.models import Account as AccountDB, BankIntegration as BankIntegrationDB
+from app.services.config_service import ConfigService
+from app.services.exceptions import BankAPIError
 
 
 class CountryData(BaseModel):
@@ -21,7 +21,7 @@ class CountryData(BaseModel):
 
     code: str
     name: str
-    flag: Optional[str] = None
+    flag: str | None = None
 
 
 class InstitutionData(BaseModel):
@@ -30,7 +30,7 @@ class InstitutionData(BaseModel):
     id: str
     name: str
     logo: str = ""
-    countries: List[str] = []
+    countries: list[str] = []
 
 
 class AccountData(BaseModel):
@@ -81,7 +81,7 @@ class SetupService:
         self.integration_repo = BankIntegrationRepository(db_session)
         self.user_id = user_id
 
-    def get_supported_countries(self) -> List[CountryData]:
+    def get_supported_countries(self) -> list[CountryData]:
         """
         Get list of supported countries.
 
@@ -90,7 +90,7 @@ class SetupService:
         """
         return [CountryData(**country) for country in self.SUPPORTED_COUNTRIES]
 
-    def get_institutions_for_country(self, country_code: str) -> List[InstitutionData]:
+    def get_institutions_for_country(self, country_code: str) -> list[InstitutionData]:
         """
         Get available bank institutions for a country.
 
@@ -119,13 +119,13 @@ class SetupService:
 
             return institutions
         except Exception as e:
-            raise BankAPIError(f"Failed to get institutions: {str(e)}") from e
+            raise BankAPIError(f"Failed to get institutions: {e!s}") from e
 
     def create_bank_link(
         self,
         institution_id: str,
         callback_url: str = "http://localhost:8000/setup/bank-callback",
-    ) -> Dict[str, str]:
+    ) -> dict[str, str]:
         """
         Create a bank linking requisition.
 
@@ -149,9 +149,9 @@ class SetupService:
                 "requisition_id": requisition.get("id", ""),
             }
         except Exception as e:
-            raise BankAPIError(f"Failed to create bank link: {str(e)}") from e
+            raise BankAPIError(f"Failed to create bank link: {e!s}") from e
 
-    def get_requisition_accounts(self, requisition_id: str) -> List[str]:
+    def get_requisition_accounts(self, requisition_id: str) -> list[str]:
         """
         Get account IDs from a requisition.
 
@@ -168,11 +168,11 @@ class SetupService:
             requisition = self.bank_client.get_requisition(requisition_id)
             return requisition.get("accounts", [])
         except Exception as e:
-            raise BankAPIError(f"Failed to get requisition: {str(e)}") from e
+            raise BankAPIError(f"Failed to get requisition: {e!s}") from e
 
     def get_account_details_for_selection(
-        self, account_ids: List[str]
-    ) -> List[AccountData]:
+        self, account_ids: list[str]
+    ) -> list[AccountData]:
         """
         Get account details for user selection.
 
@@ -192,7 +192,7 @@ class SetupService:
                 account_details.append(AccountData(id=account_id, name=account_name))
             except Exception as e:
                 # Log error but continue with other accounts
-                print(f"Error fetching account {account_id}: {str(e)}")
+                print(f"Error fetching account {account_id}: {e!s}")
 
         return account_details
 
@@ -200,7 +200,7 @@ class SetupService:
         self,
         requisition_id: str,
         institution_id: str,
-        selected_account_ids: List[str],
+        selected_account_ids: list[str],
         country_code: str = "GB",
     ) -> None:
         """
@@ -260,7 +260,7 @@ class SetupService:
                     bank_name = inst["name"]
                     break
         except Exception as e:
-            print(f"Error fetching institution name: {str(e)}")
+            print(f"Error fetching institution name: {e!s}")
 
         # Save accounts to database
         for account_id in selected_account_ids:
@@ -272,7 +272,9 @@ class SetupService:
                 # Extract account information
                 account_data = details["account"]  # required field
                 iban = account_data.get("iban", "")  # NotRequired
-                account_name = account_data.get("name", "Unknown Account")  # NotRequired
+                account_name = account_data.get(
+                    "name", "Unknown Account"
+                )  # NotRequired
                 currency = account_data.get("currency", "EUR")  # NotRequired
 
                 # Get balance
@@ -306,7 +308,7 @@ class SetupService:
                     self.account_repo.create(new_account)
             except Exception as e:
                 # Log error but continue with other accounts
-                print(f"Error saving account {account_id} to database: {str(e)}")
+                print(f"Error saving account {account_id} to database: {e!s}")
 
     def reset_setup(self) -> None:
         """

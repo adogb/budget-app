@@ -1,8 +1,7 @@
 # models.py (SQLAlchemy 2.0 style)
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
-from typing import Optional
+from datetime import date, datetime
 from uuid import uuid4
 
 from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text, func
@@ -51,12 +50,12 @@ class BankIntegration(Base):
     )
 
     # Access tokens (in production, these should be encrypted)
-    access_token: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    refresh_token: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    access_valid_days: Mapped[Optional[int]] = mapped_column(
+    access_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    refresh_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    access_valid_days: Mapped[int | None] = mapped_column(
         Integer, nullable=True, default=90
     )
-    refresh_valid_days: Mapped[Optional[int]] = mapped_column(
+    refresh_valid_days: Mapped[int | None] = mapped_column(
         Integer, nullable=True, default=90
     )
 
@@ -80,12 +79,12 @@ class Category(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     name: Mapped[str] = mapped_column(String(64), nullable=False)
-    parent_id: Mapped[Optional[int]] = mapped_column(
+    parent_id: Mapped[int | None] = mapped_column(
         ForeignKey("categories.id"), nullable=True
     )
 
     user: Mapped[User] = relationship(back_populates="categories")
-    parent: Mapped[Optional[Category]] = relationship(remote_side="Category.id")
+    parent: Mapped[Category | None] = relationship(remote_side="Category.id")
     transactions: Mapped[list[Transaction]] = relationship(back_populates="category")
 
 
@@ -94,7 +93,7 @@ class Account(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    external_id: Mapped[Optional[str]] = mapped_column(
+    external_id: Mapped[str | None] = mapped_column(
         String(100), nullable=True, unique=True
     )  # Bank's account ID
 
@@ -118,7 +117,7 @@ class Transaction(Base):
     )
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"), nullable=False)
-    category_id: Mapped[Optional[int]] = mapped_column(
+    category_id: Mapped[int | None] = mapped_column(
         ForeignKey("categories.id"), nullable=True
     )
 
@@ -127,16 +126,16 @@ class Transaction(Base):
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="DKK")
 
     description: Mapped[str] = mapped_column(String(255), nullable=False)
-    notes: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    notes: Mapped[str | None] = mapped_column(String(255), nullable=True)
     booking_date: Mapped[date] = mapped_column(Date, nullable=False)
-    value_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    value_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
-    bank_transaction_id: Mapped[Optional[str]] = mapped_column(
+    bank_transaction_id: Mapped[str | None] = mapped_column(
         String(100), nullable=True
     )  # Bank's transaction ID
-    gc_transaction_id: Mapped[Optional[str]] = mapped_column(
+    gc_transaction_id: Mapped[str | None] = mapped_column(
         String(100), nullable=True
     )  # GoCardless transaction ID
 
     account: Mapped[Account] = relationship(back_populates="transactions")
-    category: Mapped[Optional[Category]] = relationship(back_populates="transactions")
+    category: Mapped[Category | None] = relationship(back_populates="transactions")

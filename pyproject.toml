@@ -13,3 +13,31 @@ dependencies = [
     "ruff>=0.16.7",
     "sqlalchemy>=2.0.52",
 ]
+
+[tool.ruff]
+exclude = ["alembic/versions/*"]
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+    "DTZ",  # flake8-datetimez
+    "BLE",  # flake8-blind-except
+    "PTH",  # flake8-use-pathlib
+    "RUF",  # ruff-specific rules
+]
+ignore = [
+    # FastAPI uses function calls (Depends, Query, ...) as argument defaults by design.
+    "B008",
+    # strptime with a fixed "%Y-%m-%d" format yields a naive datetime we
+    # immediately convert to a date; the missing tz is intentional.
+    "DTZ007",
+]

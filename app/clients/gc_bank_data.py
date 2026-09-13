@@ -1,7 +1,8 @@
-from uuid import uuid4
 import os
-import requests
 import time
+from uuid import uuid4
+
+import requests
 from requests.auth import AuthBase
 
 from app.clients.gc_bank_data_models import (

@@ -5,16 +5,16 @@ Orchestrates the sync operation by coordinating AccountService, TransactionServi
 and the GoCardless bank client.
 """
 
-from typing import Dict, Any
-from datetime import datetime, timedelta
 import logging
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.db.repositories.transaction_repository import TransactionRepository
-from app.db.repositories.account_repository import AccountRepository
-from app.db.models import Transaction as TransactionDB
 from app.clients.gc_bank_data import GoCardlessBankDataClient
+from app.db.models import Transaction as TransactionDB
+from app.db.repositories.account_repository import AccountRepository
+from app.db.repositories.transaction_repository import TransactionRepository
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ class SyncService:
         self.user_id = user_id
         self.db_session = db_session
 
-    def sync_account_transactions(self, account_id: int) -> Dict[str, Any]:
+    def sync_account_transactions(self, account_id: int) -> dict[str, Any]:
         """
         Sync transactions for an account from the bank API.
 
@@ -80,14 +80,20 @@ class SyncService:
         if latest_transaction_date:
             # Use the latest transaction date (inclusive) to avoid missing same-day transactions
             date_from = latest_transaction_date.isoformat()
-            logger.info(f"Syncing transactions from {date_from} (latest transaction date)")
+            logger.info(
+                f"Syncing transactions from {date_from} (latest transaction date)"
+            )
         else:
             # No transactions exist, fetch last 90 days
-            date_from = (datetime.now().date() - timedelta(days=90)).isoformat()
-            logger.info(f"No existing transactions, syncing from {date_from} (90 days ago)")
+            date_from = (datetime.now(UTC).date() - timedelta(days=90)).isoformat()
+            logger.info(
+                f"No existing transactions, syncing from {date_from} (90 days ago)"
+            )
 
         # Fetch transactions from the bank API
-        logger.info(f"Fetching transactions from GoCardless for account {account.external_id}")
+        logger.info(
+            f"Fetching transactions from GoCardless for account {account.external_id}"
+        )
         transactions_data = self.bank_client.get_account_transactions(
             account.external_id, date_from=date_from
         )
@@ -96,7 +102,9 @@ class SyncService:
         all_transactions = []
         if "transactions" in transactions_data:
             all_transactions.extend(transactions_data["transactions"].get("booked", []))
-            all_transactions.extend(transactions_data["transactions"].get("pending", []))
+            all_transactions.extend(
+                transactions_data["transactions"].get("pending", [])
+            )
 
         logger.info(f"Received {len(all_transactions)} transactions from API")
 
@@ -117,7 +125,7 @@ class SyncService:
 
         return {
             "new_transactions_count": len(new_transactions),
-            "last_synced": datetime.now(),
+            "last_synced": datetime.now(UTC),
         }
 
     def _convert_transactions(
@@ -145,12 +153,16 @@ class SyncService:
             gc_transaction_id = trans_data.get("internalTransactionId")
 
             if not bank_transaction_id:
-                logger.warning(f"Skipping transaction without transactionId: {trans_data}")
+                logger.warning(
+                    f"Skipping transaction without transactionId: {trans_data}"
+                )
                 continue
 
             # Check if transaction already exists using bank_transaction_id
             if self.transaction_repo.exists_by_bank_transaction_id(bank_transaction_id):
-                logger.debug(f"Transaction {bank_transaction_id} already exists, skipping")
+                logger.debug(
+                    f"Transaction {bank_transaction_id} already exists, skipping"
+                )
                 continue
 
             # Parse transaction data
@@ -164,7 +176,7 @@ class SyncService:
             booking_date = (
                 datetime.strptime(booking_date_str, "%Y-%m-%d").date()
                 if booking_date_str
-                else datetime.now().date()
+                else datetime.now(UTC).date()
             )
             value_date = (
                 datetime.strptime(value_date_str, "%Y-%m-%d").date()
@@ -209,7 +221,7 @@ class SyncService:
             logger.info(f"Fetching balance for account {account.external_id}")
             balances_data = self.bank_client.get_account_balances(account.external_id)
 
-            if "balances" in balances_data and balances_data["balances"]:
+            if balances_data.get("balances"):
                 balance_amount = balances_data["balances"][0]["balanceAmount"]["amount"]
                 old_balance = account.balance
                 account.balance = float(balance_amount)

@@ -2,17 +2,17 @@
 Tests for the setup flow including bank integration and account creation.
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
-from datetime import datetime
+from unittest.mock import Mock
 
-from app.db.models import Base, User, Account, BankIntegration
-from app.db.repositories.bank_integration_repository import BankIntegrationRepository
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from app.db.models import BankIntegration, Base, User
 from app.db.repositories.account_repository import AccountRepository
-from app.services.setup_service import SetupService
+from app.db.repositories.bank_integration_repository import BankIntegrationRepository
 from app.services.config_service import ConfigService
+from app.services.setup_service import SetupService
 
 
 @pytest.fixture

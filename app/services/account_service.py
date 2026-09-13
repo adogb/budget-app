@@ -4,12 +4,10 @@ Service for managing bank account operations.
 Handles business logic for account data, using local database as primary source.
 """
 
-from typing import List, Optional
-
 from sqlalchemy.orm import Session
 
-from app.db.repositories.account_repository import AccountRepository
 from app.db.models import Account as AccountDB
+from app.db.repositories.account_repository import AccountRepository
 from app.models.responses import AccountResponse
 
 
@@ -45,7 +43,7 @@ class AccountService:
             currency=account.currency,
         )
 
-    def get_all_accounts(self) -> List[AccountResponse]:
+    def get_all_accounts(self) -> list[AccountResponse]:
         """
         Get all user's accounts.
 
@@ -55,7 +53,7 @@ class AccountService:
         accounts = self.repo.get_all(self.user_id)
         return [self._to_response(acc) for acc in accounts]
 
-    def get_account_by_id(self, account_id: str) -> Optional[AccountResponse]:
+    def get_account_by_id(self, account_id: str) -> AccountResponse | None:
         """
         Get a specific account by ID.
 
@@ -70,7 +68,7 @@ class AccountService:
             return self._to_response(account)
         return None
 
-    def get_account_by_iban(self, iban: str) -> Optional[AccountResponse]:
+    def get_account_by_iban(self, iban: str) -> AccountResponse | None:
         """
         Get account by IBAN.
 

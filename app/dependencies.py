@@ -1,14 +1,14 @@
 from fastapi import Depends
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.clients.gc_bank_data import GoCardlessBankDataClient
-from app.services.config_service import ConfigService
+from app.db.database import get_db
 from app.services.account_service import AccountService
-from app.services.transaction_service import TransactionService
+from app.services.config_service import ConfigService
 from app.services.setup_service import SetupService
 from app.services.sync_service import SyncService
-from app.db.database import get_db
-from fastapi.templating import Jinja2Templates
+from app.services.transaction_service import TransactionService
 
 templates = Jinja2Templates(directory="app/templates")
 

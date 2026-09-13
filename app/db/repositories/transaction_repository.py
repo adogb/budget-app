@@ -4,7 +4,6 @@ Handles CRUD and queries for financial transactions.
 """
 
 from datetime import date, datetime
-from typing import List, Optional
 
 from sqlalchemy import and_, desc
 from sqlalchemy.orm import Session
@@ -24,7 +23,7 @@ class TransactionRepository:
         """
         self.db = db
 
-    def get_by_id(self, transaction_id: str) -> Optional[Transaction]:
+    def get_by_id(self, transaction_id: str) -> Transaction | None:
         """
         Get a transaction by its ID.
 
@@ -41,12 +40,12 @@ class TransactionRepository:
     def get_all(
         self,
         user_id: int,
-        account_id: Optional[int] = None,
-        from_date: Optional[datetime] = None,
-        to_date: Optional[datetime] = None,
-        category_id: Optional[int] = None,
-        limit: Optional[int] = None,
-    ) -> List[Transaction]:
+        account_id: int | None = None,
+        from_date: datetime | None = None,
+        to_date: datetime | None = None,
+        category_id: int | None = None,
+        limit: int | None = None,
+    ) -> list[Transaction]:
         """
         Get transactions with optional filtering.
 
@@ -86,8 +85,8 @@ class TransactionRepository:
         return query.all()
 
     def get_by_account(
-        self, account_id: int, limit: Optional[int] = None
-    ) -> List[Transaction]:
+        self, account_id: int, limit: int | None = None
+    ) -> list[Transaction]:
         """
         Get all transactions for a specific account.
 
@@ -111,7 +110,7 @@ class TransactionRepository:
 
     def get_by_date_range(
         self, user_id: int, from_date: datetime, to_date: datetime
-    ) -> List[Transaction]:
+    ) -> list[Transaction]:
         """
         Get transactions within a date range.
 
@@ -151,7 +150,7 @@ class TransactionRepository:
         self.db.refresh(transaction)
         return transaction
 
-    def create_bulk(self, transactions: List[Transaction]) -> List[Transaction]:
+    def create_bulk(self, transactions: list[Transaction]) -> list[Transaction]:
         """
         Create multiple transactions in bulk.
 
@@ -182,8 +181,8 @@ class TransactionRepository:
         return transaction
 
     def update_category(
-        self, transaction_id: str, category_id: Optional[int]
-    ) -> Optional[Transaction]:
+        self, transaction_id: str, category_id: int | None
+    ) -> Transaction | None:
         """
         Update the category of a transaction.
 
@@ -217,7 +216,7 @@ class TransactionRepository:
             return True
         return False
 
-    def get_uncategorized(self, user_id: int) -> List[Transaction]:
+    def get_uncategorized(self, user_id: int) -> list[Transaction]:
         """
         Get all transactions without a category.
 
@@ -269,7 +268,7 @@ class TransactionRepository:
             > 0
         )
 
-    def get_latest_transaction_date(self, account_id: int) -> Optional[date]:
+    def get_latest_transaction_date(self, account_id: int) -> date | None:
         """
         Get the most recent transaction booking date for an account.
 

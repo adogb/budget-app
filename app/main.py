@@ -1,19 +1,20 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, Depends
+
+from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from app.routers import accounts, transactions, setup
-from app.services.exceptions import (
-    SetupNotCompleteError,
-    ConfigNotFoundError,
-    BankAPIError,
-    InvalidConfigError,
-)
-import os
-from dotenv import load_dotenv
-from app.dependencies import templates, get_account_service
-from app.services.account_service import AccountService
+
 from app.db.database import init_db
+from app.dependencies import get_account_service, templates
+from app.routers import accounts, setup, transactions
+from app.services.account_service import AccountService
+from app.services.exceptions import (
+    BankAPIError,
+    ConfigNotFoundError,
+    InvalidConfigError,
+    SetupNotCompleteError,
+)
 
 # Load environment variables from .env file
 load_dotenv()

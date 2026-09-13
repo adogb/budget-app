@@ -4,19 +4,20 @@ Tests for account synchronization functionality.
 Tests repository methods, service layer sync logic, and sync endpoint.
 """
 
-import pytest
 from datetime import date, datetime, timedelta
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
+
+import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from app.db.models import Base, Account, Transaction, User
+from app.clients.gc_bank_data import GoCardlessBankDataClient
+from app.db.models import Account, Base, Transaction, User
 from app.db.repositories.transaction_repository import TransactionRepository
 from app.services.sync_service import SyncService
-from app.clients.gc_bank_data import GoCardlessBankDataClient
-
 
 # Fixtures
+
 
 @pytest.fixture
 def db_session():
@@ -46,7 +47,7 @@ def test_account(db_session):
         iban="DK1234567890",
         balance=1000.0,
         currency="DKK",
-        bank_name="Test Bank"
+        bank_name="Test Bank",
     )
     db_session.add(account)
     db_session.commit()
@@ -88,6 +89,7 @@ def test_transactions(db_session, test_account):
 
 # Repository Layer Tests
 
+
 def test_exists_by_bank_transaction_id_true(db_session, test_transactions):
     """Test that exists_by_bank_transaction_id returns True for existing transaction."""
     repo = TransactionRepository(db_session)
@@ -115,6 +117,7 @@ def test_get_latest_transaction_date_no_transactions(db_session, test_account):
 
 
 # Service Layer Tests
+
 
 @pytest.fixture
 def mock_bank_client():
@@ -349,7 +352,9 @@ def test_sync_with_same_day_transactions(
     assert result["new_transactions_count"] == 1
 
 
-def test_sync_empty_response(db_session, test_account, test_transactions, mock_bank_client):
+def test_sync_empty_response(
+    db_session, test_account, test_transactions, mock_bank_client
+):
     """Test handling when API returns no new transactions."""
     # Mock API response with empty transactions
     mock_bank_client.get_account_transactions.return_value = {

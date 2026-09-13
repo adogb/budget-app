@@ -1,17 +1,18 @@
-from pydantic import BaseModel
-from typing import Optional
 from datetime import date
+
+from pydantic import BaseModel
+
 
 # Not used at the moment, using TransactionResponse instead
 # might be useful later
 class Transaction(BaseModel):
     id: str
     account_id: str
-    external_id: Optional[str] = None
+    external_id: str | None = None
     amount: float
     currency: str
     description: str
-    notes: Optional[str] = None
+    notes: str | None = None
     booking_date: date
-    value_date: Optional[date] = None
-    category: Optional[str] = None
+    value_date: date | None = None
+    category: str | None = None

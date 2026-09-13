@@ -4,13 +4,12 @@ Service for managing transaction operations.
 Handles business logic for transaction data, using local database as primary source.
 """
 
-from typing import List, Optional
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
-from app.db.repositories.transaction_repository import TransactionRepository
 from app.db.models import Transaction as TransactionDB
+from app.db.repositories.transaction_repository import TransactionRepository
 from app.models.responses import TransactionResponse
 
 
@@ -52,12 +51,12 @@ class TransactionService:
 
     def get_transactions(
         self,
-        account_id: Optional[int] = None,
-        from_date: Optional[date] = None,
-        to_date: Optional[date] = None,
-        category_id: Optional[int] = None,
-        limit: Optional[int] = None,
-    ) -> List[TransactionResponse]:
+        account_id: int | None = None,
+        from_date: date | None = None,
+        to_date: date | None = None,
+        category_id: int | None = None,
+        limit: int | None = None,
+    ) -> list[TransactionResponse]:
         """
         Get transactions with optional filtering from local database.
 
@@ -73,18 +72,18 @@ class TransactionService:
         """
         # Set default date range if not provided
         if not from_date and not to_date:
-            to_datetime = datetime.now()
-            from_datetime = datetime.now() - timedelta(days=30)
+            to_datetime = datetime.now(UTC)
+            from_datetime = datetime.now(UTC) - timedelta(days=30)
         else:
             from_datetime = (
                 datetime.combine(from_date, datetime.min.time())
                 if from_date
-                else datetime.now() - timedelta(days=30)
+                else datetime.now(UTC) - timedelta(days=30)
             )
             to_datetime = (
                 datetime.combine(to_date, datetime.max.time())
                 if to_date
-                else datetime.now()
+                else datetime.now(UTC)
             )
 
         # Fetch transactions from database
@@ -99,7 +98,7 @@ class TransactionService:
 
         return [self._to_response(tx) for tx in transactions]
 
-    def get_uncategorized_transactions(self) -> List[TransactionResponse]:
+    def get_uncategorized_transactions(self) -> list[TransactionResponse]:
         """
         Get all transactions without a category.
 
@@ -109,7 +108,7 @@ class TransactionService:
         transactions = self.repo.get_uncategorized(self.user_id)
         return [self._to_response(tx) for tx in transactions]
 
-    def get_transaction_by_id(self, transaction_id: str) -> Optional[TransactionResponse]:
+    def get_transaction_by_id(self, transaction_id: str) -> TransactionResponse | None:
         """
         Get a single transaction by ID.
 
@@ -125,8 +124,8 @@ class TransactionService:
         return None
 
     def update_transaction_category(
-        self, transaction_id: str, category_id: Optional[int]
-    ) -> Optional[TransactionResponse]:
+        self, transaction_id: str, category_id: int | None
+    ) -> TransactionResponse | None:
         """
         Update the category of a transaction.
 
@@ -144,7 +143,7 @@ class TransactionService:
 
     def update_transaction_notes(
         self, transaction_id: str, notes: str
-    ) -> Optional[TransactionResponse]:
+    ) -> TransactionResponse | None:
         """
         Update the notes of a transaction.
 

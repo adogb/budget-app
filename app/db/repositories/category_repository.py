@@ -3,8 +3,6 @@ Repository for Category database operations.
 Handles CRUD and queries for transaction categories.
 """
 
-from typing import List, Optional
-
 from sqlalchemy.orm import Session
 
 from app.db.models import Category
@@ -22,7 +20,7 @@ class CategoryRepository:
         """
         self.db = db
 
-    def get_by_id(self, category_id: int) -> Optional[Category]:
+    def get_by_id(self, category_id: int) -> Category | None:
         """
         Get a category by its ID.
 
@@ -34,7 +32,7 @@ class CategoryRepository:
         """
         return self.db.query(Category).filter(Category.id == category_id).first()
 
-    def get_all(self, user_id: int) -> List[Category]:
+    def get_all(self, user_id: int) -> list[Category]:
         """
         Get all categories for a user.
 
@@ -46,7 +44,7 @@ class CategoryRepository:
         """
         return self.db.query(Category).filter(Category.user_id == user_id).all()
 
-    def get_top_level(self, user_id: int) -> List[Category]:
+    def get_top_level(self, user_id: int) -> list[Category]:
         """
         Get all top-level categories (no parent) for a user.
 
@@ -62,7 +60,7 @@ class CategoryRepository:
             .all()
         )
 
-    def get_children(self, parent_id: int) -> List[Category]:
+    def get_children(self, parent_id: int) -> list[Category]:
         """
         Get all child categories of a parent category.
 
@@ -74,7 +72,7 @@ class CategoryRepository:
         """
         return self.db.query(Category).filter(Category.parent_id == parent_id).all()
 
-    def get_by_name(self, user_id: int, name: str) -> Optional[Category]:
+    def get_by_name(self, user_id: int, name: str) -> Category | None:
         """
         Get a category by name for a specific user.
 

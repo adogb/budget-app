@@ -1,14 +1,13 @@
-from datetime import datetime
 import logging
-from fastapi import APIRouter, Depends, HTTPException, Request, Query
-from fastapi.responses import RedirectResponse, HTMLResponse
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
-from app.services.setup_service import SetupService
-from app.services.config_service import ConfigService
-from app.dependencies import get_setup_service, get_config_service, templates
+
 from app.db.database import get_db
 from app.db.repositories.bank_integration_repository import BankIntegrationRepository
-from typing import List, Dict, Optional
+from app.dependencies import get_setup_service, templates
+from app.services.setup_service import SetupService
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +80,7 @@ async def start_bank_link(
     request: Request,
     institution_id: str,
     country_code: str = Query(...),
-    redirect_url: Optional[str] = Query(None),
+    redirect_url: str | None = Query(None),
     setup_service: SetupService = Depends(get_setup_service),
     db: Session = Depends(get_db),
 ):
@@ -170,7 +169,7 @@ async def complete_setup(
     account_ids_raw = form_data.getlist("account_ids")
 
     # Ensure we have strings only
-    account_ids: List[str] = [
+    account_ids: list[str] = [
         str(acc_id) for acc_id in account_ids_raw if isinstance(acc_id, str)
     ]
 

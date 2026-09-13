@@ -3,8 +3,7 @@ Repository for BankIntegration database operations.
 Handles CRUD and queries for bank integrations.
 """
 
-from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -23,7 +22,7 @@ class BankIntegrationRepository:
         """
         self.db = db
 
-    def get_by_id(self, integration_id: int) -> Optional[BankIntegration]:
+    def get_by_id(self, integration_id: int) -> BankIntegration | None:
         """
         Get a bank integration by its ID.
 
@@ -39,7 +38,7 @@ class BankIntegrationRepository:
             .first()
         )
 
-    def get_by_user_id(self, user_id: int) -> List[BankIntegration]:
+    def get_by_user_id(self, user_id: int) -> list[BankIntegration]:
         """
         Get all bank integrations for a user.
 
@@ -55,7 +54,7 @@ class BankIntegrationRepository:
             .all()
         )
 
-    def get_by_requisition_id(self, requisition_id: str) -> Optional[BankIntegration]:
+    def get_by_requisition_id(self, requisition_id: str) -> BankIntegration | None:
         """
         Get a bank integration by requisition ID.
 
@@ -71,7 +70,7 @@ class BankIntegrationRepository:
             .first()
         )
 
-    def get_active_integration(self, user_id: int) -> Optional[BankIntegration]:
+    def get_active_integration(self, user_id: int) -> BankIntegration | None:
         """
         Get the most recent active bank integration for a user.
 
@@ -113,7 +112,7 @@ class BankIntegrationRepository:
         Returns:
             Updated BankIntegration object
         """
-        integration.updated_at = datetime.now(timezone.utc)
+        integration.updated_at = datetime.now(UTC)
         self.db.commit()
         self.db.refresh(integration)
         return integration
@@ -125,7 +124,7 @@ class BankIntegrationRepository:
         refresh_token: str,
         access_valid_days: int = 90,
         refresh_valid_days: int = 90,
-    ) -> Optional[BankIntegration]:
+    ) -> BankIntegration | None:
         """
         Update tokens for a bank integration.
 

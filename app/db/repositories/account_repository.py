@@ -3,8 +3,6 @@ Repository for Account database operations.
 Handles CRUD and queries for bank accounts.
 """
 
-from typing import List, Optional
-
 from sqlalchemy.orm import Session
 
 from app.db.models import Account
@@ -22,7 +20,7 @@ class AccountRepository:
         """
         self.db = db
 
-    def get_by_id(self, account_id: str) -> Optional[Account]:
+    def get_by_id(self, account_id: str) -> Account | None:
         """
         Get an account by its ID.
 
@@ -34,7 +32,7 @@ class AccountRepository:
         """
         return self.db.query(Account).filter(Account.id == account_id).first()
 
-    def get_by_iban(self, iban: str) -> Optional[Account]:
+    def get_by_iban(self, iban: str) -> Account | None:
         """
         Get an account by its IBAN.
 
@@ -46,7 +44,7 @@ class AccountRepository:
         """
         return self.db.query(Account).filter(Account.iban == iban).first()
 
-    def get_by_external_id(self, external_id: str) -> Optional[Account]:
+    def get_by_external_id(self, external_id: str) -> Account | None:
         """
         Get an account by its external ID (bank's account ID).
 
@@ -58,7 +56,7 @@ class AccountRepository:
         """
         return self.db.query(Account).filter(Account.external_id == external_id).first()
 
-    def get_all(self, user_id: int) -> List[Account]:
+    def get_all(self, user_id: int) -> list[Account]:
         """
         Get all accounts for a user.
 
@@ -99,7 +97,7 @@ class AccountRepository:
         self.db.refresh(account)
         return account
 
-    def update_balance(self, account_id: str, new_balance: float) -> Optional[Account]:
+    def update_balance(self, account_id: str, new_balance: float) -> Account | None:
         """
         Update the balance of an account.
 

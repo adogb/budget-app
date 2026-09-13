@@ -1,17 +1,18 @@
 """
 Response models for API endpoints.
 """
-from pydantic import BaseModel
-from typing import Optional
+
 from datetime import date
+
+from pydantic import BaseModel
 
 
 class AccountResponse(BaseModel):
     """Response model for account data."""
-    
+
     id: str
     name: str
-    iban: Optional[str] = None
+    iban: str | None = None
     balance: float
     currency: str
 
@@ -24,7 +25,7 @@ class TransactionResponse(BaseModel):
     amount: float
     currency: str
     description: str
-    notes: Optional[str] = None
+    notes: str | None = None
     booking_date: date
-    value_date: Optional[date] = None
-    category: Optional[str] = None
+    value_date: date | None = None
+    category: str | None = None

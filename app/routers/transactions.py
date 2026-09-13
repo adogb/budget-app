@@ -1,12 +1,10 @@
-from fastapi import APIRouter, Depends, Query, Request, Form
+from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from app.dependencies import get_transaction_service, get_account_service
-from app.services.transaction_service import TransactionService
+
+from app.dependencies import get_account_service, get_transaction_service
 from app.services.account_service import AccountService
-from app.models.responses import TransactionResponse
-from typing import List, Optional
-from datetime import date
+from app.services.transaction_service import TransactionService
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 templates = Jinja2Templates(directory="app/templates")
@@ -15,14 +13,13 @@ templates = Jinja2Templates(directory="app/templates")
 @router.get("/", response_class=HTMLResponse)
 def transactions_page(
     request: Request,
-    account_id: Optional[int] = None,
+    account_id: int | None = None,
     transaction_service: TransactionService = Depends(get_transaction_service),
     account_service: AccountService = Depends(get_account_service),
 ):
     """Render transactions page"""
     transactions = transaction_service.get_transactions(
-        account_id=account_id,
-        limit=100
+        account_id=account_id, limit=100
     )
     accounts = account_service.get_all_accounts()
 
@@ -32,9 +29,10 @@ def transactions_page(
             "request": request,
             "transactions": transactions,
             "accounts": accounts,
-            "selected_account_id": account_id
-        }
+            "selected_account_id": account_id,
+        },
     )
+
 
 @router.patch("/{transaction_id}/notes", response_class=HTMLResponse)
 def update_transaction_notes(

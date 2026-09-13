@@ -1,14 +1,19 @@
+import logging
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from app.dependencies import get_account_service, get_sync_service, get_transaction_service
+
+from app.dependencies import (
+    get_account_service,
+    get_sync_service,
+    get_transaction_service,
+)
+from app.models.responses import AccountResponse
 from app.services.account_service import AccountService
 from app.services.sync_service import SyncService
 from app.services.transaction_service import TransactionService
-from app.models.responses import AccountResponse
-from typing import List
-from datetime import datetime
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +21,7 @@ router = APIRouter(prefix="/accounts", tags=["accounts"])
 templates = Jinja2Templates(directory="app/templates")
 
 
-@router.get("/", response_model=List[AccountResponse])
+@router.get("/", response_model=list[AccountResponse])
 def list_accounts(account_service: AccountService = Depends(get_account_service)):
     """List all connected bank accounts"""
     return account_service.get_all_accounts()
@@ -44,7 +49,7 @@ def sync_accounts(
     logger.info("Starting transaction sync...")
     total_new_transactions = 0
     sync_errors = []
-    last_synced = datetime.now()
+    last_synced = datetime.now(UTC)
 
     # Get all accounts
     accounts = account_service.get_all_accounts()
@@ -60,7 +65,7 @@ def sync_accounts(
                 f"Synced account {account.id}: {result['new_transactions_count']} new transactions"
             )
         except Exception as e:
-            error_msg = f"Error syncing account {account.name}: {str(e)}"
+            error_msg = f"Error syncing account {account.name}: {e!s}"
             sync_errors.append(error_msg)
             logger.error(error_msg, exc_info=True)
 
@@ -89,5 +94,5 @@ def sync_accounts(
             "sync_message": sync_message,
             "sync_status_class": sync_status_class,
             "last_synced": last_synced,
-        }
+        },
     )
