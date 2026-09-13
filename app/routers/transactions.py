@@ -24,9 +24,9 @@ def transactions_page(
     accounts = account_service.get_all_accounts()
 
     return templates.TemplateResponse(
+        request,
         "transactions.html",
         {
-            "request": request,
             "transactions": transactions,
             "accounts": accounts,
             "selected_account_id": account_id,

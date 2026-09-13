@@ -1,4 +1,4 @@
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Request
@@ -87,14 +87,15 @@ def read_root(
     account_service: AccountService = Depends(get_account_service),
 ):
     """Render the dashboard home page with account list"""
+    # suppress() is the idiomatic form of try/except/pass: ignore these
+    # expected errors (setup incomplete, no config, bank unreachable) and
+    # use the empty default so the page shows an empty state.
     accounts = []
-    try:
+    with suppress(SetupNotCompleteError, ConfigNotFoundError, BankAPIError):
         accounts = account_service.get_all_accounts()
-    except (SetupNotCompleteError, ConfigNotFoundError, BankAPIError):
-        # If setup not complete or error fetching accounts, show empty state
-        pass
 
     return templates.TemplateResponse(
+        request,
         "index.html",
-        {"request": request, "title": "Dashboard - Budget App", "accounts": accounts},
+        {"title": "Dashboard - Budget App", "accounts": accounts},
     )

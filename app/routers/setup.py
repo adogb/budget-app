@@ -24,7 +24,7 @@ async def setup_home(
     """Render the country selection page at /setup"""
     countries = setup_service.get_supported_countries()
     return templates.TemplateResponse(
-        "setup/countries.html", {"request": request, "countries": countries}
+        request, "setup/countries.html", {"countries": countries}
     )
 
 
@@ -51,7 +51,7 @@ async def get_countries(
     countries = setup_service.get_supported_countries()
 
     return templates.TemplateResponse(
-        "setup/countries.html", {"request": request, "countries": countries}
+        request, "setup/countries.html", {"countries": countries}
     )
 
 
@@ -66,9 +66,9 @@ async def get_institutions(
 
     # Store country_code in query params for the next step (stateless)
     return templates.TemplateResponse(
+        request,
         "setup/institutions.html",
         {
-            "request": request,
             "institutions": institutions,
             "country_code": country_code,
         },
@@ -138,8 +138,8 @@ async def bank_callback(
     if not account_ids:
         # Return the pending template
         return templates.TemplateResponse(
+            request,
             "setup/bank_pending.html",
-            {"request": request},
         )
 
     # Get account details for selection
@@ -147,9 +147,9 @@ async def bank_callback(
 
     # Return the account selection template
     return templates.TemplateResponse(
+        request,
         "setup/accounts.html",
         {
-            "request": request,
             "accounts": account_details,
         },
     )
@@ -196,8 +196,8 @@ async def complete_setup(
 
     # Return the completion template
     return templates.TemplateResponse(
+        request,
         "setup/complete.html",
-        {"request": request},
     )
 
 

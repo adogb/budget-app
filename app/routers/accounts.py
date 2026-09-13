@@ -86,9 +86,9 @@ def sync_accounts(
 
     # Render template response with HTMX OOB swaps
     return templates.TemplateResponse(
+        request,
         "transactions/_sync_response.html",
         {
-            "request": request,
             "transactions": transactions,
             "accounts": updated_accounts,
             "sync_message": sync_message,
