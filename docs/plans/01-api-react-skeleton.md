@@ -234,3 +234,18 @@ A short checklist that every PR is reviewed against:
 - **Temporary gap:** after PR A there's no way to link a bank or sync until
   slice 2. The old database is kept as `db/budget-old.db` in case you need
   anything from it.
+
+## Follow-ups for slice 2 (found in PR A review)
+
+These are existing bank-sync behaviours, kept as they were because PR A
+promised not to change them:
+
+- Pending transactions without a `bookingDate` get today's date. That moves
+  the next sync's start date forward, so bookings dated earlier are missed.
+  This is fixed by storing pending transactions separately (spec §4).
+- A `transactionId` that appears twice in one response is inserted twice.
+  Deduplicate within the batch, and add a unique constraint.
+- An empty `remittanceInformationUnstructuredArray` (`[]`) raises
+  `IndexError` and aborts the whole sync.
+- Errors from `get_account_transactions` aren't converted to `BankAPIError`.
+  Put the `BankAPIError` → 502 handler back when the bank routes return.
