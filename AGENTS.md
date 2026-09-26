@@ -1,26 +1,39 @@
 # Agent Instructions
 
-Personal Budget Web App — see `project_requirements.md` (PRD) for scope and
-`README.md` for the "why".
+Personal envelope-budgeting web app. Read in order: `docs/intent.md` (why),
+`docs/spec.md` (what), `docs/plans/` (how, one plan per slice).
 
-## Scope
-- Implement only the 🔹 MVP features in the PRD.
-- Ignore Post-MVP / multi-user features unless explicitly asked.
+## Workflow
+- Implement only what the spec marks **Must/Should**, one slice at a time.
+- No code without an approved plan in `docs/plans/`.
+- Review every PR against `REVIEW.md`.
 
 ## Stack
-- Backend: Python 3.13, FastAPI, Pydantic, SQLAlchemy + SQLite
-- Frontend: HTMX + Jinja2 + Tailwind CSS
-- Bank data: GoCardless/Nordigen API
+- Backend: Python 3.13, FastAPI (JSON API under `/api`), Pydantic,
+  SQLAlchemy 2.0 + SQLite, Alembic
+- Frontend: React + TypeScript + Tailwind in `frontend/` (Vite)
+- Bank data: GoCardless Bank Account Data
+
+## Layout
+- `app/models.py`: all tables. `app/db.py`: session and `DbSession`.
+- One folder per feature (`app/accounts/`, `app/transactions/`, `app/bank/`),
+  each with `routes.py` (HTTP), `service.py` (plain functions: logic and
+  queries) and `schemas.py` (Pydantic). No repository layer, no service classes.
 
 ## Commands
-Prefix commands with `uv run` (no manual venv activation needed).
-- `uv run fastapi dev` — run in development
+Prefix Python commands with `uv run` (no manual venv activation needed).
+- `uv run fastapi dev` — run the API in development
 - `uv run ruff check` / `uv run ruff format` — lint / format
-- `uv run pytest` — run tests
-- `uv run alembic revision --autogenerate -m "..."` then `uv run alembic upgrade head` — migrate
+- `uv run pytest` — run tests (in-memory database, see `tests/conftest.py`)
+- `uv run alembic revision --autogenerate -m "..."` then
+  `uv run alembic upgrade head` — migrate. The schema is only ever created by
+  Alembic.
 
 ## Conventions
 - Line length 88. Ruff lint rules are pinned in `pyproject.toml` (`select`).
+- Money: integers in minor units (`*_minor` columns), sent as
+  `{amount, currency}` (`app/money.py`). Parse bank amounts with
+  `to_minor_units`, never `float`.
 - Prefer `pathlib.Path` over `os.path`/`open()` for filesystem work.
 - Timezone-aware datetimes only: `datetime.now(UTC)`, never bare
   `datetime.now()` (ruff DTZ005). Store timestamps in UTC.
