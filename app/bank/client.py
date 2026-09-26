@@ -1,11 +1,11 @@
-import os
+import logging
 import time
 from uuid import uuid4
 
 import requests
 from requests.auth import AuthBase
 
-from app.clients.gc_bank_data_models import (
+from app.bank.client_models import (
     GCAccountBalances,
     GCAccountDetailResponse,
     GCAccountTransactions,
@@ -13,16 +13,15 @@ from app.clients.gc_bank_data_models import (
     GCInstitution,
     GCRequisition,
 )
+from app.config import GOCARDLESS_SECRET_ID, GOCARDLESS_SECRET_KEY
+
+logger = logging.getLogger(__name__)
 
 BASE_URL = "https://bankaccountdata.gocardless.com/api/v2"
-SECRET_ID = os.getenv("NORDIGEN_SECRET_ID")
-SECRET_KEY = os.getenv("NORDIGEN_SECRET_KEY")
 
 
 class GoCardlessBankAuth(AuthBase):
-    """Custom auth handler for GoCardless Bank API token authentication.
-    This modifies the client request to include the Authorization header with the Bearer token.
-    It checks if the token is valid and refreshes it if necessary."""
+    """Adds a valid Bearer token to every request, refreshing it when needed."""
 
     def __init__(self, client):
         self.client = client
@@ -37,7 +36,10 @@ class GoCardlessBankAuth(AuthBase):
 
 class GoCardlessBankDataClient:
     def __init__(
-        self, secret_id=SECRET_ID, secret_key=SECRET_KEY, token_refresh_buffer=60
+        self,
+        secret_id=GOCARDLESS_SECRET_ID,
+        secret_key=GOCARDLESS_SECRET_KEY,
+        token_refresh_buffer=60,
     ):
         self.secret_id = secret_id
         self.secret_key = secret_key
@@ -80,10 +82,13 @@ class GoCardlessBankDataClient:
             headers=headers,
         )
 
-        # Print response details for debugging if there's an error
         if resp.status_code != 200:
-            print(f"Token request failed: {resp.status_code} {resp.reason}")
-            print(f"Response: {resp.text}")
+            logger.warning(
+                "Token request failed: %s %s %s",
+                resp.status_code,
+                resp.reason,
+                resp.text,
+            )
 
         resp.raise_for_status()
         data = resp.json()
@@ -100,7 +105,7 @@ class GoCardlessBankDataClient:
         return self.access_token
 
     def refresh_access_token(self) -> str:
-        """Use the refresh token to get a new access token. If refresh token is expired, get a new one."""
+        """Get a new access token, falling back to a fresh one if refresh fails."""
         if not self.refresh_token:
             # No refresh token, get a new one
             return self.get_access_token()
@@ -118,10 +123,13 @@ class GoCardlessBankDataClient:
 
         resp = requests.post(url, json={"refresh": self.refresh_token}, headers=headers)
 
-        # Print response details for debugging if there's an error
         if resp.status_code != 200:
-            print(f"Token refresh failed: {resp.status_code} {resp.reason}")
-            print(f"Response: {resp.text}")
+            logger.warning(
+                "Token refresh failed: %s %s %s",
+                resp.status_code,
+                resp.reason,
+                resp.text,
+            )
 
         if resp.status_code == 401:
             # Refresh token expired or invalid, get a new one
@@ -209,8 +217,8 @@ class GoCardlessBankDataClient:
 
         Args:
             account_id (str): The account ID to get transactions for
-            date_from (str, optional): Filter transactions from this date (ISO format: YYYY-MM-DD)
-            date_to (str, optional): Filter transactions to this date (ISO format: YYYY-MM-DD)
+            date_from (str, optional): From this date (YYYY-MM-DD)
+            date_to (str, optional): Up to this date (YYYY-MM-DD)
 
         Returns:
             dict: Transaction data including booked and pending transactions
@@ -226,32 +234,3 @@ class GoCardlessBankDataClient:
         resp = self.session.get(url, params=params)
         resp.raise_for_status()
         return resp.json()
-
-    def get_token_status(self):
-        """
-        Get the current status of the access and refresh tokens.
-
-        Returns:
-            dict: Token status information including expiry timestamps and remaining time
-        """
-        now = int(time.time())
-        access_remaining = max(0, self.token_expires - now)
-        refresh_remaining = max(0, self.refresh_expires - now)
-
-        return {
-            "has_access_token": self.access_token is not None,
-            "has_refresh_token": self.refresh_token is not None,
-            "access_expires_at": self.token_expires,
-            "refresh_expires_at": self.refresh_expires,
-            "access_expires_in_seconds": access_remaining,
-            "refresh_expires_in_seconds": refresh_remaining,
-            "current_time": now,
-            "is_access_valid": self.access_token is not None
-            and now < self.token_expires,
-            "is_refresh_valid": self.refresh_token is not None
-            and now < self.refresh_expires,
-        }
-
-    def close(self):
-        """Close the session when done to free resources."""
-        self.session.close()
