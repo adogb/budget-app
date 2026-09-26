@@ -1,71 +1,36 @@
-from contextlib import asynccontextmanager, suppress
+from pathlib import Path
 
-from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 
-from app.db.database import init_db
-from app.dependencies import get_account_service, templates
-from app.routers import accounts, setup, transactions
-from app.services.account_service import AccountService
-from app.services.exceptions import BankAPIError
-
-# Load environment variables from .env file
-load_dotenv()
+from app.accounts import routes as accounts
+from app.config import FRONTEND_DIST
+from app.transactions import routes as transactions
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Read why here: https://fastapi.tiangolo.com/advanced/events/#lifespan
+def serve_frontend(app: FastAPI, dist: Path) -> None:
+    """Serve the built React app, sending unknown paths to index.html.
 
-    # Initialize the database before starting app request handling
-    init_db()
-    yield
+    React Router handles URLs like /transactions in the browser, so on a page
+    refresh the server must answer them with index.html too.
+    """
+    root = dist.resolve()
 
-
-# Initialize the FastAPI app
-app = FastAPI(title="Budget App", lifespan=lifespan)
-
-# Mount static files directory
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-
-
-# Global exception handlers
-@app.exception_handler(BankAPIError)
-async def bank_api_error_handler(request: Request, exc: BankAPIError):
-    """Handle bank API errors."""
-    error_detail = {
-        "detail": str(exc),
-        "error_type": "bank_api_error",
-    }
-    if exc.account_id:
-        error_detail["account_id"] = exc.account_id
-
-    return JSONResponse(status_code=502, content=error_detail)
+    @app.get("/{path:path}", include_in_schema=False)
+    def frontend(path: str) -> FileResponse:
+        if path == "api" or path.startswith("api/"):
+            raise HTTPException(status_code=404)
+        file = (root / path).resolve()
+        if file.is_file() and file.is_relative_to(root):
+            return FileResponse(file)
+        return FileResponse(root / "index.html")
 
 
-# Include routers
+# No automatic /api/x/ -> /api/x redirects: the frontend catch-all would
+# otherwise make them behave differently depending on whether dist/ exists.
+app = FastAPI(title="Budget App", redirect_slashes=False)
 app.include_router(accounts.router)
 app.include_router(transactions.router)
-app.include_router(setup.router)
 
-
-@app.get("/", response_class=HTMLResponse)
-def read_root(
-    request: Request,
-    account_service: AccountService = Depends(get_account_service),
-):
-    """Render the dashboard home page with account list"""
-    # suppress() is the idiomatic form of try/except/pass: ignore the expected
-    # error (bank unreachable) and use the empty default so the page shows an
-    # empty state.
-    accounts = []
-    with suppress(BankAPIError):
-        accounts = account_service.get_all_accounts()
-
-    return templates.TemplateResponse(
-        request,
-        "index.html",
-        {"title": "Dashboard - Budget App", "accounts": accounts},
-    )
+if FRONTEND_DIST.exists():
+    serve_frontend(app, FRONTEND_DIST)
