@@ -32,8 +32,16 @@ select = [
     "RUF",  # ruff-specific rules
 ]
 
+[tool.pyright]
+# Same checker as Pylance in VS Code, so the editor and `uv run pyright` agree.
+include = ["app", "tests", "scripts"]
+pythonVersion = "3.13"
+venvPath = "."
+venv = ".venv"
+
 [dependency-groups]
 dev = [
+    "pyright>=1.1.414",
     "pytest>=9.1.1",
     "ruff>=0.16.9",
 ]

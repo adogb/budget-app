@@ -24,6 +24,7 @@ Personal envelope-budgeting web app. Read in order: `docs/intent.md` (why),
 Prefix Python commands with `uv run` (no manual venv activation needed).
 - `uv run fastapi dev` — run the API in development
 - `uv run ruff check` / `uv run ruff format` — lint / format
+- `uv run pyright` — type-check (the same checker as Pylance); keep it at 0 errors
 - `uv run pytest` — run tests (in-memory database, see `tests/conftest.py`)
 - `uv run alembic revision --autogenerate -m "..."` then
   `uv run alembic upgrade head` — migrate. The schema is only ever created by
