@@ -1,8 +1,10 @@
 """Fetching new transactions and the balance for an account from the bank."""
 
+import hashlib
 import logging
+from collections import Counter
+from collections.abc import Iterable
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
 
 from requests import RequestException
 from sqlalchemy import select
@@ -10,109 +12,145 @@ from sqlalchemy.orm import Session
 
 from app.bank.client import GoCardlessBankDataClient
 from app.bank.client_models import GCTransaction
+from app.bank.errors import BankAPIError
 from app.models import Account, Transaction
 from app.money import to_minor_units
 
 logger = logging.getLogger(__name__)
 
 FIRST_SYNC_DAYS = 90
+# Banks sometimes book a transaction days after its booking date, so each sync
+# looks back a week. The import key stops the overlap from creating duplicates.
+OVERLAP_DAYS = 7
 
 
-def sync_account(
-    db: Session, client: GoCardlessBankDataClient, account_id: int
-) -> dict[str, Any]:
-    """Import transactions since the latest one we have, then refresh the balance.
-
-    Returns `new_transactions_count` and `last_synced`.
-    """
+def sync_account(db: Session, client: GoCardlessBankDataClient, account_id: int) -> int:
+    """Import new booked transactions, refresh the balance, return the new count."""
     account = db.get(Account, account_id)
     if account is None:
         raise ValueError(f"Account {account_id} not found")
     if not account.external_id:
         raise ValueError(f"Account {account_id} has no external_id")
 
-    # Inclusive, so transactions booked later on that same day aren't missed.
-    latest = latest_booking_date(db, account_id)
-    if latest is None:
-        date_from = datetime.now(UTC).date() - timedelta(days=FIRST_SYNC_DAYS)
-    else:
-        date_from = latest
+    date_from = sync_start(db, account_id)
     logger.info("Syncing %s from %s", account.name, date_from)
+    try:
+        response = client.get_account_transactions(
+            account.external_id, date_from=date_from.isoformat()
+        )
+    except RequestException as e:
+        raise BankAPIError.from_request(
+            f"Could not fetch transactions for {account.name}", e
+        ) from e
+    booked = response.get("transactions", {}).get("booked", [])
 
-    response = client.get_account_transactions(
-        account.external_id, date_from=date_from.isoformat()
-    )
-    bank_transactions = response.get("transactions", {})
-    fetched = bank_transactions.get("booked", []) + bank_transactions.get("pending", [])
-
-    new_transactions = [
-        _to_model(data, account) for data in fetched if _is_new(db, data)
-    ]
+    new_transactions = _new_transactions(db, account, booked)
     db.add_all(new_transactions)
+    _refresh_balance(client, account)
+    account.last_synced_at = datetime.now(UTC)
     db.commit()
     logger.info("Imported %d new transactions", len(new_transactions))
-
-    _refresh_balance(db, client, account)
-
-    return {
-        "new_transactions_count": len(new_transactions),
-        "last_synced": datetime.now(UTC),
-    }
+    return len(new_transactions)
 
 
-def latest_booking_date(db: Session, account_id: int) -> date | None:
-    query = (
+def sync_start(db: Session, account_id: int) -> date:
+    latest = db.scalars(
         select(Transaction.booking_date)
         .where(Transaction.account_id == account_id)
         .order_by(Transaction.booking_date.desc())
+    ).first()
+    if latest is None:
+        return datetime.now(UTC).date() - timedelta(days=FIRST_SYNC_DAYS)
+    return latest - timedelta(days=OVERLAP_DAYS)
+
+
+def import_keys(rows: Iterable[GCTransaction]) -> list[str]:
+    """One dedup key per row: the bank's ID, or else a hash of its contents.
+
+    Identical rows without an ID (two 35 kr coffees on the same day) get a
+    counter in the hash so both are kept. The counter is the same on every sync
+    because the sync window always covers whole days.
+    """
+    seen: Counter[str] = Counter()
+    keys = []
+    for data in rows:
+        key = data.get("transactionId") or data.get("internalTransactionId")
+        if not key:
+            amount = data.get("transactionAmount", {})
+            fingerprint = "|".join(
+                [
+                    data.get("bookingDate", ""),
+                    amount.get("amount", ""),
+                    amount.get("currency", ""),
+                    _description(data),
+                ]
+            )
+            occurrence = seen[fingerprint]
+            seen[fingerprint] += 1
+            digest = hashlib.sha256(f"{fingerprint}|{occurrence}".encode())
+            key = f"hash:{digest.hexdigest()}"
+        keys.append(key)
+    return keys
+
+
+def _new_transactions(
+    db: Session, account: Account, rows: list[GCTransaction]
+) -> list[Transaction]:
+    keys = import_keys(rows)
+    already_imported = set(
+        db.scalars(
+            select(Transaction.import_key).where(
+                Transaction.account_id == account.id,
+                Transaction.import_key.in_(keys),
+            )
+        )
     )
-    return db.scalars(query).first()
+    new_transactions = []
+    for key, data in zip(keys, rows, strict=True):
+        if key in already_imported:
+            continue
+        if not (data.get("bookingDate") or data.get("valueDate")):
+            logger.warning("Skipping booked transaction without a date: %s", data)
+            continue
+        # Also skips a key the bank repeats within one response.
+        already_imported.add(key)
+        new_transactions.append(_to_transaction(data, account, key))
+    return new_transactions
 
 
-def transaction_exists(db: Session, bank_transaction_id: str) -> bool:
-    query = select(Transaction.id).where(
-        Transaction.bank_transaction_id == bank_transaction_id
-    )
-    return db.scalars(query).first() is not None
-
-
-def _is_new(db: Session, data: GCTransaction) -> bool:
-    bank_transaction_id = data.get("transactionId")
-    if not bank_transaction_id:
-        logger.warning("Skipping transaction without transactionId: %s", data)
-        return False
-    return not transaction_exists(db, bank_transaction_id)
-
-
-def _to_model(data: GCTransaction, account: Account) -> Transaction:
+def _to_transaction(data: GCTransaction, account: Account, key: str) -> Transaction:
     amount = data.get("transactionAmount", {})
-    booking_date = data.get("bookingDate")
     value_date = data.get("valueDate")
-    description = (
-        data.get("remittanceInformationUnstructuredArray", [None])[0]
-        or data.get("remittanceInformationUnstructured")
-        or data.get("additionalInformation")
-        or "No description"
-    )
     return Transaction(
         account_id=account.id,
+        import_key=key,
         bank_transaction_id=data.get("transactionId"),
         gc_transaction_id=data.get("internalTransactionId"),
         amount_minor=to_minor_units(amount.get("amount", "0")),
         currency=amount.get("currency", account.currency),
-        description=description[:255],
-        booking_date=(
-            date.fromisoformat(booking_date)
-            if booking_date
-            else datetime.now(UTC).date()
-        ),
+        description=_description(data),
+        payee=_payee(data),
+        booking_date=date.fromisoformat(data.get("bookingDate") or data["valueDate"]),
         value_date=date.fromisoformat(value_date) if value_date else None,
     )
 
 
-def _refresh_balance(
-    db: Session, client: GoCardlessBankDataClient, account: Account
-) -> None:
+def _description(data: GCTransaction) -> str:
+    candidates = [
+        *data.get("remittanceInformationUnstructuredArray", []),
+        data.get("remittanceInformationUnstructured"),
+        data.get("additionalInformation"),
+        _payee(data),
+    ]
+    return next((c for c in candidates if c), "No description")[:255]
+
+
+def _payee(data: GCTransaction) -> str | None:
+    payee = data.get("creditorName") or data.get("debtorName")
+    return payee[:255] if payee else None
+
+
+def _refresh_balance(client: GoCardlessBankDataClient, account: Account) -> None:
     # A failed balance refresh shouldn't undo the imported transactions.
     try:
         balances = client.get_account_balances(account.external_id)["balances"]
@@ -121,4 +159,3 @@ def _refresh_balance(
         return
     if balances:
         account.balance_minor = to_minor_units(balances[0]["balanceAmount"]["amount"])
-        db.commit()

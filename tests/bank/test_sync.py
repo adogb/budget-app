@@ -4,16 +4,17 @@ from datetime import UTC, date, datetime, timedelta
 from unittest.mock import Mock
 
 import pytest
+from requests import HTTPError, Response
 from sqlalchemy import select
 
 from app.bank.client import GoCardlessBankDataClient
-from app.bank.sync import latest_booking_date, sync_account, transaction_exists
+from app.bank.errors import BankAPIError
+from app.bank.sync import import_keys, sync_account, sync_start
 from app.models import Account, Transaction
 
 
 @pytest.fixture
 def test_account(db):
-    """Create a test account."""
     account = Account(
         id=1,
         external_id="test_external_123",
@@ -25,19 +26,17 @@ def test_account(db):
     )
     db.add(account)
     db.commit()
-    db.refresh(account)
     return account
 
 
 @pytest.fixture
 def test_transactions(db, test_account):
-    """Create test transactions."""
     transactions = [
         Transaction(
             id="trans_1",
             account_id=test_account.id,
+            import_key="ext_1",
             bank_transaction_id="ext_1",
-            gc_transaction_id="gc_1",
             amount_minor=10000,
             currency="DKK",
             description="Transaction 1",
@@ -46,8 +45,8 @@ def test_transactions(db, test_account):
         Transaction(
             id="trans_2",
             account_id=test_account.id,
+            import_key="ext_2",
             bank_transaction_id="ext_2",
-            gc_transaction_id="gc_2",
             amount_minor=20000,
             currency="DKK",
             description="Transaction 2",
@@ -59,292 +58,229 @@ def test_transactions(db, test_account):
     return transactions
 
 
-# Query helpers
-
-
-def test_exists_by_bank_transaction_id_true(db, test_transactions):
-    """transaction_exists is True for an imported bank transaction ID."""
-    assert transaction_exists(db, "ext_1") is True
-
-
-def test_exists_by_bank_transaction_id_false(db, test_transactions):
-    """transaction_exists is False for an unknown bank transaction ID."""
-    assert transaction_exists(db, "non_existent") is False
-
-
-def test_get_latest_transaction_date(db, test_transactions):
-    """Test getting the latest transaction date for an account."""
-    latest_date = latest_booking_date(db, 1)
-    assert latest_date == date(2026, 4, 3)
-
-
-def test_get_latest_transaction_date_no_transactions(db, test_account):
-    """Test getting latest transaction date when no transactions exist."""
-    latest_date = latest_booking_date(db, test_account.id)
-    assert latest_date is None
-
-
-# sync_account
-
-
 @pytest.fixture
 def mock_bank_client():
-    """Create a mock GoCardless bank client."""
-    return Mock(spec=GoCardlessBankDataClient)
-
-
-def test_sync_account_transactions_with_existing_transactions(
-    db, test_account, test_transactions, mock_bank_client
-):
-    """Test syncing when account has existing transactions."""
-    # Mock API response with new transactions
-    mock_bank_client.get_account_transactions.return_value = {
-        "transactions": {
-            "booked": [
-                {
-                    "transactionId": "ext_3",
-                    "internalTransactionId": "gc_3",
-                    "transactionAmount": {"amount": "150.00", "currency": "DKK"},
-                    "bookingDate": "2026-04-04",
-                    "valueDate": "2026-04-04",
-                    "remittanceInformationUnstructured": "New Transaction 3",
-                }
-            ],
-            "pending": [],
-        }
-    }
-    mock_bank_client.get_account_balances.return_value = {
-        "balances": [{"balanceAmount": {"amount": "1150.00", "currency": "DKK"}}]
-    }
-
-    # Call sync
-    result = sync_account(db, mock_bank_client, test_account.id)
-
-    # Verify API was called with correct date
-    mock_bank_client.get_account_transactions.assert_called_once_with(
-        "test_external_123", date_from="2026-04-03"
-    )
-
-    # Verify result
-    assert result["new_transactions_count"] == 1
-    assert "last_synced" in result
-
-    # Verify transaction was created
-    assert transaction_exists(db, "ext_3") is True
-
-
-def test_sync_account_transactions_no_duplicates(
-    db, test_account, test_transactions, mock_bank_client
-):
-    """Test that duplicate transactions are not inserted."""
-    # Mock API response with existing transaction
-    mock_bank_client.get_account_transactions.return_value = {
-        "transactions": {
-            "booked": [
-                {
-                    "transactionId": "ext_2",  # Already exists
-                    "transactionAmount": {"amount": "200.00", "currency": "DKK"},
-                    "bookingDate": "2026-04-03",
-                    "valueDate": "2026-04-03",
-                    "remittanceInformationUnstructured": "Transaction 2",
-                }
-            ],
-            "pending": [],
-        }
-    }
-    mock_bank_client.get_account_balances.return_value = {
+    client = Mock(spec=GoCardlessBankDataClient)
+    client.get_account_transactions.return_value = bank_response()
+    client.get_account_balances.return_value = {
         "balances": [{"balanceAmount": {"amount": "1000.00", "currency": "DKK"}}]
     }
-
-    # Call sync
-    result = sync_account(db, mock_bank_client, test_account.id)
-
-    # Verify no new transactions were added
-    assert result["new_transactions_count"] == 0
-
-    # Verify only 2 transactions exist (original ones)
-    all_trans = db.scalars(
-        select(Transaction).where(Transaction.account_id == test_account.id)
-    ).all()
-    assert len(all_trans) == 2
+    return client
 
 
-def test_sync_account_transactions_new_account(db, test_account, mock_bank_client):
-    """Test syncing an account with no existing transactions (should fetch 90 days)."""
-    # Mock API response
-    mock_bank_client.get_account_transactions.return_value = {
-        "transactions": {
-            "booked": [
-                {
-                    "transactionId": "ext_new",
-                    "transactionAmount": {"amount": "100.00", "currency": "DKK"},
-                    "bookingDate": "2026-04-01",
-                    "valueDate": "2026-04-01",
-                    "remittanceInformationUnstructured": "First Transaction",
-                }
-            ],
-            "pending": [],
-        }
+def bank_response(booked=(), pending=()):
+    return {"transactions": {"booked": list(booked), "pending": list(pending)}}
+
+
+def booked(
+    transaction_id="ext_new", amount="-35.00", booking_date="2026-04-04", **extra
+):
+    row = {
+        "transactionAmount": {"amount": amount, "currency": "DKK"},
+        "bookingDate": booking_date,
+        "valueDate": booking_date,
+        "remittanceInformationUnstructured": "Coffee",
+        **extra,
     }
-    mock_bank_client.get_account_balances.return_value = {
-        "balances": [{"balanceAmount": {"amount": "1100.00", "currency": "DKK"}}]
-    }
-
-    result = sync_account(db, mock_bank_client, test_account.id)
-
-    # Verify API was called with 90 days ago
-    expected_date = (datetime.now(UTC).date() - timedelta(days=90)).isoformat()
-    mock_bank_client.get_account_transactions.assert_called_once_with(
-        "test_external_123", date_from=expected_date
-    )
-
-    # Verify transaction was created
-    assert result["new_transactions_count"] == 1
+    if transaction_id:
+        row["transactionId"] = transaction_id
+    return row
 
 
-def test_sync_account_transactions_updates_balance(
+def stored(db) -> list[Transaction]:
+    return list(db.scalars(select(Transaction).order_by(Transaction.booking_date)))
+
+
+# Sync window
+
+
+def test_window_starts_7_days_before_latest(db, test_transactions):
+    assert sync_start(db, 1) == date(2026, 3, 27)
+
+
+def test_first_sync_goes_back_90_days(db, test_account):
+    assert sync_start(db, 1) == datetime.now(UTC).date() - timedelta(days=90)
+
+
+def test_window_is_passed_to_the_bank(
     db, test_account, test_transactions, mock_bank_client
 ):
-    """Test that account balance is updated after sync."""
-    initial_balance = test_account.balance_minor
+    sync_account(db, mock_bank_client, test_account.id)
 
-    # Mock API response
-    mock_bank_client.get_account_transactions.return_value = {
-        "transactions": {"booked": [], "pending": []}
-    }
+    mock_bank_client.get_account_transactions.assert_called_once_with(
+        "test_external_123", date_from="2026-03-27"
+    )
+
+
+# Importing
+
+
+def test_imports_new_booked_transactions(
+    db, test_account, test_transactions, mock_bank_client
+):
+    mock_bank_client.get_account_transactions.return_value = bank_response(
+        [booked("ext_3", amount="150.00", creditorName="Netto")]
+    )
+
+    count = sync_account(db, mock_bank_client, test_account.id)
+
+    assert count == 1
+    new = stored(db)[-1]
+    assert new.import_key == "ext_3"
+    assert new.amount_minor == 15000
+    assert new.payee == "Netto"
+
+
+def test_already_imported_rows_are_skipped(
+    db, test_account, test_transactions, mock_bank_client
+):
+    mock_bank_client.get_account_transactions.return_value = bank_response(
+        [booked("ext_2", booking_date="2026-04-03")]
+    )
+
+    assert sync_account(db, mock_bank_client, test_account.id) == 0
+    assert len(stored(db)) == 2
+
+
+def test_same_day_as_latest_is_still_imported(
+    db, test_account, test_transactions, mock_bank_client
+):
+    mock_bank_client.get_account_transactions.return_value = bank_response(
+        [booked("ext_same_day", booking_date="2026-04-03")]
+    )
+
+    assert sync_account(db, mock_bank_client, test_account.id) == 1
+
+
+def test_empty_response(db, test_account, test_transactions, mock_bank_client):
+    assert sync_account(db, mock_bank_client, test_account.id) == 0
+
+
+def test_pending_rows_are_not_imported_as_transactions(
+    db, test_account, mock_bank_client
+):
+    mock_bank_client.get_account_transactions.return_value = bank_response(
+        booked=[booked("ext_booked")], pending=[booked("ext_pending")]
+    )
+
+    assert sync_account(db, mock_bank_client, test_account.id) == 1
+    assert [t.import_key for t in stored(db)] == ["ext_booked"]
+
+
+# Dedup keys
+
+
+def test_key_falls_back_to_internal_id_then_hash():
+    keys = import_keys(
+        [
+            booked("bank-id", internalTransactionId="gc-id"),
+            booked(None, internalTransactionId="gc-id"),
+            booked(None),
+        ]
+    )
+
+    assert keys[:2] == ["bank-id", "gc-id"]
+    assert keys[2].startswith("hash:")
+
+
+def test_rows_without_ids_are_imported_once(db, test_account, mock_bank_client):
+    mock_bank_client.get_account_transactions.return_value = bank_response(
+        [booked(None, internalTransactionId="gc-1"), booked(None, amount="-99.00")]
+    )
+
+    assert sync_account(db, mock_bank_client, test_account.id) == 2
+    assert sync_account(db, mock_bank_client, test_account.id) == 0
+
+
+def test_identical_rows_same_day_are_both_kept(db, test_account, mock_bank_client):
+    coffee = booked(None)
+    mock_bank_client.get_account_transactions.return_value = bank_response(
+        [coffee, dict(coffee)]
+    )
+
+    assert sync_account(db, mock_bank_client, test_account.id) == 2
+    assert sync_account(db, mock_bank_client, test_account.id) == 0
+
+
+def test_duplicate_id_in_one_response_is_inserted_once(
+    db, test_account, mock_bank_client
+):
+    mock_bank_client.get_account_transactions.return_value = bank_response(
+        [booked("dup"), booked("dup")]
+    )
+
+    assert sync_account(db, mock_bank_client, test_account.id) == 1
+
+
+def test_booked_row_without_a_date_is_skipped(db, test_account, mock_bank_client):
+    undated = booked("no-date")
+    del undated["bookingDate"], undated["valueDate"]
+    mock_bank_client.get_account_transactions.return_value = bank_response(
+        [undated, booked("ok")]
+    )
+
+    assert sync_account(db, mock_bank_client, test_account.id) == 1
+
+
+# Descriptions
+
+
+@pytest.mark.parametrize(
+    ("fields", "expected"),
+    [
+        ({"remittanceInformationUnstructuredArray": ["Line 1", "Line 2"]}, "Line 1"),
+        ({"remittanceInformationUnstructuredArray": []}, "Coffee"),
+        (
+            {
+                "remittanceInformationUnstructured": None,
+                "additionalInformation": "Extra",
+            },
+            "Extra",
+        ),
+        ({"remittanceInformationUnstructured": None, "debtorName": "Bob"}, "Bob"),
+        ({"remittanceInformationUnstructured": None}, "No description"),
+    ],
+)
+def test_description_fallbacks(db, test_account, mock_bank_client, fields, expected):
+    mock_bank_client.get_account_transactions.return_value = bank_response(
+        [booked(**fields)]
+    )
+
+    sync_account(db, mock_bank_client, test_account.id)
+
+    assert stored(db)[0].description == expected
+
+
+# Balance, sync time and errors
+
+
+def test_updates_balance_and_sync_time(db, test_account, mock_bank_client):
     mock_bank_client.get_account_balances.return_value = {
         "balances": [{"balanceAmount": {"amount": "2500.50", "currency": "DKK"}}]
     }
 
-    # Call sync
     sync_account(db, mock_bank_client, test_account.id)
 
-    # Verify balance was updated
     db.refresh(test_account)
     assert test_account.balance_minor == 250050
-    assert test_account.balance_minor != initial_balance
+    assert test_account.last_synced_at is not None
 
 
-def test_sync_account_transactions_api_error(db, test_account, mock_bank_client):
-    """Test error handling when API call fails."""
-    # Mock API to raise an exception
-    mock_bank_client.get_account_transactions.side_effect = Exception("API Error")
+def test_failed_balance_refresh_keeps_imported_transactions(
+    db, test_account, mock_bank_client
+):
+    mock_bank_client.get_account_transactions.return_value = bank_response([booked()])
+    mock_bank_client.get_account_balances.side_effect = HTTPError("503")
 
-    # Call sync and expect exception
-    with pytest.raises(Exception, match="API Error"):
+    assert sync_account(db, mock_bank_client, test_account.id) == 1
+    assert len(stored(db)) == 1
+
+
+def test_client_error_becomes_bank_api_error(db, test_account, mock_bank_client):
+    response = Response()
+    response.status_code = 429
+    response._content = b'{"summary": "Rate limit exceeded", "detail": "Try later"}'
+    mock_bank_client.get_account_transactions.side_effect = HTTPError(response=response)
+
+    with pytest.raises(BankAPIError, match=r"Rate limit exceeded \(Try later\)"):
         sync_account(db, mock_bank_client, test_account.id)
-
-
-def test_sync_account_transactions_date_formatting(
-    db, test_account, test_transactions, mock_bank_client
-):
-    """Test that date is correctly formatted as ISO string."""
-    # Mock API response
-    mock_bank_client.get_account_transactions.return_value = {
-        "transactions": {"booked": [], "pending": []}
-    }
-    mock_bank_client.get_account_balances.return_value = {
-        "balances": [{"balanceAmount": {"amount": "1000.00", "currency": "DKK"}}]
-    }
-
-    # Call sync
-    sync_account(db, mock_bank_client, test_account.id)
-
-    # Verify date format (YYYY-MM-DD)
-    call_args = mock_bank_client.get_account_transactions.call_args
-    date_from = call_args[1]["date_from"]
-    assert date_from == "2026-04-03"  # Latest transaction date
-
-
-def test_sync_with_same_day_transactions(
-    db, test_account, test_transactions, mock_bank_client
-):
-    """Test inclusive date fetching to not miss same-day transactions."""
-    # Mock API response with same-day transaction
-    mock_bank_client.get_account_transactions.return_value = {
-        "transactions": {
-            "booked": [
-                {
-                    "transactionId": "ext_same_day",
-                    "transactionAmount": {"amount": "50.00", "currency": "DKK"},
-                    "bookingDate": "2026-04-03",  # Same as latest
-                    "valueDate": "2026-04-03",
-                    "remittanceInformationUnstructured": "Same day transaction",
-                }
-            ],
-            "pending": [],
-        }
-    }
-    mock_bank_client.get_account_balances.return_value = {
-        "balances": [{"balanceAmount": {"amount": "1050.00", "currency": "DKK"}}]
-    }
-
-    # Call sync
-    result = sync_account(db, mock_bank_client, test_account.id)
-
-    # Verify date_from includes the same day (inclusive)
-    mock_bank_client.get_account_transactions.assert_called_once_with(
-        "test_external_123", date_from="2026-04-03"
-    )
-
-    # Verify new transaction was added
-    assert result["new_transactions_count"] == 1
-
-
-def test_sync_empty_response(db, test_account, test_transactions, mock_bank_client):
-    """Test handling when API returns no new transactions."""
-    # Mock API response with empty transactions
-    mock_bank_client.get_account_transactions.return_value = {
-        "transactions": {"booked": [], "pending": []}
-    }
-    mock_bank_client.get_account_balances.return_value = {
-        "balances": [{"balanceAmount": {"amount": "1000.00", "currency": "DKK"}}]
-    }
-
-    # Call sync
-    result = sync_account(db, mock_bank_client, test_account.id)
-
-    # Verify no transactions were added
-    assert result["new_transactions_count"] == 0
-
-
-def test_sync_pending_and_booked_transactions(
-    db, test_account, test_transactions, mock_bank_client
-):
-    """Test that both booked and pending transactions are synced."""
-    # Mock API response with both types
-    mock_bank_client.get_account_transactions.return_value = {
-        "transactions": {
-            "booked": [
-                {
-                    "transactionId": "ext_booked",
-                    "transactionAmount": {"amount": "100.00", "currency": "DKK"},
-                    "bookingDate": "2026-04-04",
-                    "valueDate": "2026-04-04",
-                    "remittanceInformationUnstructured": "Booked Transaction",
-                }
-            ],
-            "pending": [
-                {
-                    "transactionId": "ext_pending",
-                    "transactionAmount": {"amount": "50.00", "currency": "DKK"},
-                    "bookingDate": "2026-04-05",
-                    "valueDate": "2026-04-05",
-                    "remittanceInformationUnstructured": "Pending Transaction",
-                }
-            ],
-        }
-    }
-    mock_bank_client.get_account_balances.return_value = {
-        "balances": [{"balanceAmount": {"amount": "1150.00", "currency": "DKK"}}]
-    }
-
-    # Call sync
-    result = sync_account(db, mock_bank_client, test_account.id)
-
-    # Verify both transactions were added
-    assert result["new_transactions_count"] == 2
-
-    # Verify both exist in database
-    assert transaction_exists(db, "ext_booked") is True
-    assert transaction_exists(db, "ext_pending") is True
