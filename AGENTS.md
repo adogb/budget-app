@@ -49,8 +49,9 @@ Frontend, from `frontend/` (Node version in `.nvmrc`, run `nvm use`):
   `datetime.now()` (ruff DTZ005). Store timestamps in UTC.
 - Catch specific exceptions, not blind `except Exception` (ruff BLE001).
   Chain with `raise NewError(...) from e` when translating to a domain error.
-  A blind catch is only acceptable to keep a non-critical step from failing
-  the whole operation — log the traceback and add `# noqa: BLE001`.
+  A blind catch is only acceptable to keep one item from failing the whole
+  operation (e.g. one account in a sync) — log the traceback with
+  `logger.exception(...)`. Ruff accepts that without a `noqa`.
 
 ## Boundaries
 - Never commit secrets or database files.
