@@ -15,7 +15,9 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-config.set_main_option("sqlalchemy.url", DATABASE_URL)
+# `alembic -x db=sqlite:///db/scratch.db ...` migrates another database.
+db_url = context.get_x_argument(as_dictionary=True).get("db", DATABASE_URL)
+config.set_main_option("sqlalchemy.url", db_url)
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
@@ -40,6 +42,7 @@ def run_migrations_offline() -> None:
     context.configure(
         url=url,
         target_metadata=target_metadata,
+        render_as_batch=True,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
@@ -62,7 +65,12 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        # Batch mode: SQLite can only change constraints by rebuilding the table.
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            render_as_batch=True,
+        )
 
         with context.begin_transaction():
             context.run_migrations()
