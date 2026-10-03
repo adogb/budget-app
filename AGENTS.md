@@ -29,6 +29,15 @@ Prefix Python commands with `uv run` (no manual venv activation needed).
   `uv run alembic upgrade head` — migrate. The schema is only ever created by
   Alembic.
 
+Frontend, from `frontend/` (Node version in `.nvmrc`, run `nvm use`):
+- `npm run dev` — Vite on :5173, proxies `/api` to the API on :8000
+- `npm test` / `npm run lint` — Vitest / oxlint
+- `npm run build` — type-check and build `dist/`, which `uv run fastapi run`
+  serves on :8000
+- `npm run gen:api` — regenerate `openapi.json` and `src/api/schema.d.ts`
+  after any API change. TypeScript is pinned to 5.9 because
+  `openapi-typescript` doesn't support 6 yet.
+
 ## Conventions
 - Line length 88. Ruff lint rules are pinned in `pyproject.toml` (`select`).
 - Money: integers in minor units (`*_minor` columns), sent as
