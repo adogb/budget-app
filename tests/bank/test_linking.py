@@ -257,3 +257,16 @@ def test_consent_status(days_left, expected):
     now = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
 
     assert consent_status(now + timedelta(days=days_left), now) == expected
+
+
+def test_no_expiry_counts_as_expired():
+    assert consent_status(None, datetime.now(UTC)) == "expired"
+
+
+def test_start_link_without_a_login_link(db, client):
+    client.create_requisition.return_value = {"id": "req-1"}
+
+    with pytest.raises(BankAPIError, match="sent no link"):
+        start_link(db, client, "BANK_DK", "DK", "http://localhost:5173/cb")
+
+    assert db.scalars(select(BankIntegration)).all() == []

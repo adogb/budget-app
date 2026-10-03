@@ -54,7 +54,7 @@ class BankLinkOut(BaseModel):
     institution_id: str
     country_code: str
     bank_name: str
-    expires_at: datetime
+    expires_at: datetime | None
     consent_status: ConsentStatus
     account_ids: list[int]
 

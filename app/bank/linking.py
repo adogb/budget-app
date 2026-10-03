@@ -82,6 +82,9 @@ def start_link(
         )
     except RequestException as e:
         raise BankAPIError.from_request("Could not start the bank link", e) from e
+    link = requisition.get("link")
+    if not link:
+        raise BankAPIError("Could not start the bank link: GoCardless sent no link")
     db.add(
         BankIntegration(
             institution_id=institution_id,
@@ -91,7 +94,7 @@ def start_link(
         )
     )
     db.commit()
-    return requisition["link"]
+    return link
 
 
 def find_link(db: Session, reference: str) -> BankIntegration:
@@ -190,8 +193,9 @@ def list_links(db: Session) -> list[BankIntegration]:
     )
 
 
-def consent_status(expires_at: datetime, now: datetime) -> ConsentStatus:
-    if expires_at <= now:
+def consent_status(expires_at: datetime | None, now: datetime) -> ConsentStatus:
+    # No known expiry means no usable consent.
+    if expires_at is None or expires_at <= now:
         return "expired"
     if expires_at - now <= timedelta(days=EXPIRY_WARNING_DAYS):
         return "expiring"
@@ -259,7 +263,8 @@ def _save_account(
     account = _existing_account(db, chosen.external_id, iban)
     previous_link = None
     if account is None:
-        account = Account(currency=details["currency"])
+        # complete_link() has already refused anything not in this currency.
+        account = Account(currency=BUDGET_CURRENCY)
         db.add(account)
     else:
         previous_link = account.bank_integration_id

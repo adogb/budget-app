@@ -1,6 +1,7 @@
 """Tests for syncing an account's transactions and balance from the bank."""
 
 from datetime import UTC, date, datetime, timedelta
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
@@ -73,8 +74,12 @@ def bank_response(booked=(), pending=()):
 
 
 def booked(
-    transaction_id="ext_new", amount="-35.00", booking_date="2026-04-04", **extra
-):
+    transaction_id: str | None = "ext_new",
+    amount: str = "-35.00",
+    booking_date: str = "2026-04-04",
+    **extra: Any,
+) -> Any:
+    """A bank row. Typed `Any` so tests can build malformed rows too."""
     row = {
         "transactionAmount": {"amount": amount, "currency": "DKK"},
         "bookingDate": booking_date,

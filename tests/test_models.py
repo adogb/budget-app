@@ -23,8 +23,10 @@ def test_utc_datetime_comes_back_timezone_aware(db):
     copenhagen = timezone(timedelta(hours=2))
     account = add_account(db, datetime(2026, 10, 3, 14, 0, tzinfo=copenhagen))
 
-    assert account.last_synced_at == datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
-    assert account.last_synced_at.tzinfo is UTC
+    synced = account.last_synced_at
+    assert synced is not None
+    assert synced == datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
+    assert synced.tzinfo is UTC
 
 
 def test_utc_datetime_refuses_naive_values(db):
