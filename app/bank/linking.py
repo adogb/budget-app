@@ -19,9 +19,9 @@ from app.bank.client import GoCardlessBankDataClient
 from app.bank.client_models import GCAccountDetail
 from app.bank.errors import BankAPIError, LinkError, LinkNotFoundError
 from app.bank.schemas import ConsentStatus, Country, Institution, LinkAccount
+from app.bank.sync import balance_minor
 from app.config import BUDGET_CURRENCY
 from app.models import Account, BankIntegration
-from app.money import to_minor_units
 
 logger = logging.getLogger(__name__)
 
@@ -229,10 +229,7 @@ def _fetch_account(
         balances = client.get_account_balances(external_id)["balances"]
     except RequestException as e:
         raise BankAPIError.from_request("Could not read the balance", e) from e
-    balance_minor = (
-        to_minor_units(balances[0]["balanceAmount"]["amount"]) if balances else 0
-    )
-    return _ChosenAccount(external_id, details, balance_minor)
+    return _ChosenAccount(external_id, details, balance_minor(balances))
 
 
 def _account_name(details: GCAccountDetail) -> str:

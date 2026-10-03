@@ -12,17 +12,22 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.bank.client import GoCardlessBankDataClient
-from app.bank.client_models import GCTransaction
+from app.bank.client_models import GCBalance, GCTransaction
 from app.bank.errors import BankAPIError
 from app.models import Account, BankIntegration, PendingTransaction, Transaction
 from app.money import to_minor_units
 
 logger = logging.getLogger(__name__)
 
-FIRST_SYNC_DAYS = 90
-# Banks sometimes book a transaction days after its booking date, so each sync
-# looks back a week. The import key stops the overlap from creating duplicates.
+# GoCardless only returns this much history; asking for more is refused.
+HISTORY_DAYS = 90
+# Banks sometimes report a transaction days after its booking date, so each
+# sync looks back a week. The import key stops the overlap creating duplicates.
 OVERLAP_DAYS = 7
+# Most to least preferred. interimBooked is everything booked up to now, which
+# matches the booked transactions we import; interimAvailable may include a
+# credit limit, so it comes last.
+BALANCE_TYPES = ("interimBooked", "closingBooked", "expected", "interimAvailable")
 
 
 @dataclass
@@ -52,6 +57,13 @@ def sync_all(db: Session, client: GoCardlessBankDataClient) -> list[SyncResult]:
         except BankAPIError as e:
             db.rollback()
             results.append(SyncResult(account, error=str(e)))
+        # E.g. a malformed date or amount from the bank. Keep syncing the others.
+        except Exception:
+            logger.exception("Unexpected error syncing %s", account.name)
+            db.rollback()
+            results.append(
+                SyncResult(account, error="Unexpected error; see the server log")
+            )
         else:
             results.append(SyncResult(account, new_transactions=count))
     return results
@@ -67,7 +79,7 @@ def sync_account(db: Session, client: GoCardlessBankDataClient, account_id: int)
     if not external_id:
         raise ValueError(f"Account {account_id} has no external_id")
 
-    date_from = sync_start(db, account_id)
+    date_from = sync_start(db, account_id, today=datetime.now(UTC).date())
     logger.info("Syncing %s from %s", account.name, date_from)
     try:
         response = client.get_account_transactions(
@@ -91,15 +103,26 @@ def sync_account(db: Session, client: GoCardlessBankDataClient, account_id: int)
     return len(new_transactions)
 
 
-def sync_start(db: Session, account_id: int) -> date:
+def sync_start(db: Session, account_id: int, today: date) -> date:
+    """A week before the latest transaction, but never past the bank's history."""
+    earliest = today - timedelta(days=HISTORY_DAYS)
     latest = db.scalars(
         select(Transaction.booking_date)
         .where(Transaction.account_id == account_id)
         .order_by(Transaction.booking_date.desc())
     ).first()
     if latest is None:
-        return datetime.now(UTC).date() - timedelta(days=FIRST_SYNC_DAYS)
-    return latest - timedelta(days=OVERLAP_DAYS)
+        return earliest
+    return max(latest - timedelta(days=OVERLAP_DAYS), earliest)
+
+
+def balance_minor(balances: list[GCBalance]) -> int:
+    """The account's balance, choosing the type by BALANCE_TYPES."""
+    if not balances:
+        return 0
+    by_type = {b.get("balanceType"): b for b in balances}
+    chosen = next((by_type[t] for t in BALANCE_TYPES if t in by_type), balances[0])
+    return to_minor_units(chosen["balanceAmount"]["amount"])
 
 
 def import_keys(rows: Iterable[GCTransaction]) -> list[str]:
@@ -225,4 +248,4 @@ def _refresh_balance(
         logger.exception("Could not refresh the balance of %s", account.name)
         return
     if balances:
-        account.balance_minor = to_minor_units(balances[0]["balanceAmount"]["amount"])
+        account.balance_minor = balance_minor(balances)

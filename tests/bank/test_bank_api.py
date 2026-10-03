@@ -148,3 +148,21 @@ def test_sync_reports_per_account_errors(client, db, bank):
     }
     assert results["Expired"]["error"] == "Consent expired: renew the link"
     assert bank.get_account_transactions.call_count == 2
+
+
+def test_malformed_bank_data_fails_only_that_account(client, db, bank):
+    add_linked_account(db, "Checking")
+    add_linked_account(db, "Malformed")
+    good = {"transactionAmount": {"amount": "-10.00", "currency": "DKK"}}
+
+    def transactions(external_id, date_from):
+        booking_date = "not-a-date" if external_id == "ext-Malformed" else "2026-10-01"
+        row = {**good, "transactionId": external_id, "bookingDate": booking_date}
+        return {"transactions": {"booked": [row]}}
+
+    bank.get_account_transactions.side_effect = transactions
+
+    results = {r["account_name"]: r for r in client.post("/api/bank/sync").json()}
+
+    assert results["Checking"]["new_transactions"] == 1
+    assert results["Malformed"]["error"] == "Unexpected error; see the server log"

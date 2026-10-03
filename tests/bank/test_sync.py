@@ -10,8 +10,12 @@ from sqlalchemy import select
 
 from app.bank.client import GoCardlessBankDataClient
 from app.bank.errors import BankAPIError
-from app.bank.sync import import_keys, sync_account, sync_start
+from app.bank.sync import balance_minor, import_keys, sync_account, sync_start
 from app.models import Account, PendingTransaction, Transaction
+
+TODAY = datetime.now(UTC).date()
+# The fixture's latest transaction, recent enough to be inside the bank's history.
+LATEST = TODAY - timedelta(days=3)
 
 
 @pytest.fixture
@@ -41,7 +45,7 @@ def test_transactions(db, test_account):
             amount_minor=10000,
             currency="DKK",
             description="Transaction 1",
-            booking_date=date(2026, 4, 1),
+            booking_date=LATEST - timedelta(days=2),
         ),
         Transaction(
             id="trans_2",
@@ -51,7 +55,7 @@ def test_transactions(db, test_account):
             amount_minor=20000,
             currency="DKK",
             description="Transaction 2",
-            booking_date=date(2026, 4, 3),
+            booking_date=LATEST,
         ),
     ]
     db.add_all(transactions)
@@ -100,11 +104,18 @@ def stored(db) -> list[Transaction]:
 
 
 def test_window_starts_7_days_before_latest(db, test_transactions):
-    assert sync_start(db, 1) == date(2026, 3, 27)
+    assert sync_start(db, 1, today=TODAY) == LATEST - timedelta(days=7)
 
 
 def test_first_sync_goes_back_90_days(db, test_account):
-    assert sync_start(db, 1) == datetime.now(UTC).date() - timedelta(days=90)
+    assert sync_start(db, 1, today=date(2026, 10, 3)) == date(2026, 7, 5)
+
+
+def test_window_never_goes_past_the_banks_history(db, test_transactions):
+    # The latest transaction is 200 days old, e.g. a dormant savings account.
+    today = LATEST + timedelta(days=200)
+
+    assert sync_start(db, 1, today=today) == today - timedelta(days=90)
 
 
 def test_window_is_passed_to_the_bank(
@@ -113,7 +124,7 @@ def test_window_is_passed_to_the_bank(
     sync_account(db, mock_bank_client, test_account.id)
 
     mock_bank_client.get_account_transactions.assert_called_once_with(
-        "test_external_123", date_from="2026-03-27"
+        "test_external_123", date_from=(LATEST - timedelta(days=7)).isoformat()
     )
 
 
@@ -130,8 +141,7 @@ def test_imports_new_booked_transactions(
     count = sync_account(db, mock_bank_client, test_account.id)
 
     assert count == 1
-    new = stored(db)[-1]
-    assert new.import_key == "ext_3"
+    new = db.scalars(select(Transaction).where(Transaction.import_key == "ext_3")).one()
     assert new.amount_minor == 15000
     assert new.payee == "Netto"
 
@@ -208,7 +218,7 @@ def test_pending_without_booking_date_keeps_the_window(
     sync_account(db, mock_bank_client, test_account.id)
 
     assert db.scalars(select(PendingTransaction.booking_date)).one() is None
-    assert sync_start(db, test_account.id) == date(2026, 3, 27)
+    assert sync_start(db, test_account.id, today=TODAY) == LATEST - timedelta(days=7)
 
 
 # Dedup keys
@@ -296,6 +306,30 @@ def test_description_fallbacks(db, test_account, mock_bank_client, fields, expec
 
 
 # Balance, sync time and errors
+
+
+def balance(balance_type: str, amount: str) -> Any:
+    return {
+        "balanceType": balance_type,
+        "balanceAmount": {"amount": amount, "currency": "DKK"},
+    }
+
+
+def test_balance_prefers_booked_over_available():
+    balances = [
+        balance("interimAvailable", "15000.00"),
+        balance("interimBooked", "5000.00"),
+    ]
+
+    assert balance_minor(balances) == 500000
+
+
+def test_balance_falls_back_to_the_first_unknown_type():
+    assert balance_minor([balance("someBankSpecific", "12.34")]) == 1234
+
+
+def test_no_balances_is_zero():
+    assert balance_minor([]) == 0
 
 
 def test_updates_balance_and_sync_time(db, test_account, mock_bank_client):
