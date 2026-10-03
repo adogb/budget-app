@@ -34,19 +34,16 @@ class SyncResult:
 
 def sync_all(db: Session, client: GoCardlessBankDataClient) -> list[SyncResult]:
     """Sync every linked account. One failing account doesn't stop the others."""
-    accounts = list(
-        db.scalars(
-            select(Account)
-            .join(Account.bank_integration)
-            .where(BankIntegration.linked_at.is_not(None))
-            .order_by(Account.name)
-        )
-    )
+    linked_accounts = db.execute(
+        select(Account, BankIntegration)
+        .join(Account.bank_integration)
+        .where(BankIntegration.linked_at.is_not(None))
+        .order_by(Account.name)
+    ).all()
     now = datetime.now(UTC)
     results = []
-    for account in accounts:
-        expires_at = account.bank_integration.expires_at
-        if expires_at is not None and expires_at <= now:
+    for account, integration in linked_accounts:
+        if integration.expires_at is not None and integration.expires_at <= now:
             # Don't spend a rate-limited call on a request the bank will refuse.
             results.append(SyncResult(account, error="Consent expired: renew the link"))
             continue
@@ -66,14 +63,15 @@ def sync_account(db: Session, client: GoCardlessBankDataClient, account_id: int)
     account = db.get(Account, account_id)
     if account is None:
         raise ValueError(f"Account {account_id} not found")
-    if not account.external_id:
+    external_id = account.external_id
+    if not external_id:
         raise ValueError(f"Account {account_id} has no external_id")
 
     date_from = sync_start(db, account_id)
     logger.info("Syncing %s from %s", account.name, date_from)
     try:
         response = client.get_account_transactions(
-            account.external_id, date_from=date_from.isoformat()
+            external_id, date_from=date_from.isoformat()
         )
     except RequestException as e:
         raise BankAPIError.from_request(
@@ -86,7 +84,7 @@ def sync_account(db: Session, client: GoCardlessBankDataClient, account_id: int)
     )
     db.add_all(new_transactions)
     _replace_pending(db, account, bank_transactions.get("pending", []))
-    _refresh_balance(client, account)
+    _refresh_balance(client, account, external_id)
     account.last_synced_at = datetime.now(UTC)
     db.commit()
     logger.info("Imported %d new transactions", len(new_transactions))
@@ -149,16 +147,21 @@ def _new_transactions(
     for key, data in zip(keys, rows, strict=True):
         if key in already_imported:
             continue
-        if not (data.get("bookingDate") or data.get("valueDate")):
+        booked_on = data.get("bookingDate") or data.get("valueDate")
+        if not booked_on:
             logger.warning("Skipping booked transaction without a date: %s", data)
             continue
         # Also skips a key the bank repeats within one response.
         already_imported.add(key)
-        new_transactions.append(_to_transaction(data, account, key))
+        new_transactions.append(
+            _to_transaction(data, account, key, date.fromisoformat(booked_on))
+        )
     return new_transactions
 
 
-def _to_transaction(data: GCTransaction, account: Account, key: str) -> Transaction:
+def _to_transaction(
+    data: GCTransaction, account: Account, key: str, booking_date: date
+) -> Transaction:
     amount = data.get("transactionAmount", {})
     value_date = data.get("valueDate")
     return Transaction(
@@ -170,7 +173,7 @@ def _to_transaction(data: GCTransaction, account: Account, key: str) -> Transact
         currency=amount.get("currency", account.currency),
         description=_description(data),
         payee=_payee(data),
-        booking_date=date.fromisoformat(data.get("bookingDate") or data["valueDate"]),
+        booking_date=booking_date,
         value_date=date.fromisoformat(value_date) if value_date else None,
     )
 
@@ -212,10 +215,12 @@ def _payee(data: GCTransaction) -> str | None:
     return payee[:255] if payee else None
 
 
-def _refresh_balance(client: GoCardlessBankDataClient, account: Account) -> None:
+def _refresh_balance(
+    client: GoCardlessBankDataClient, account: Account, external_id: str
+) -> None:
     # A failed balance refresh shouldn't undo the imported transactions.
     try:
-        balances = client.get_account_balances(account.external_id)["balances"]
+        balances = client.get_account_balances(external_id)["balances"]
     except RequestException:
         logger.exception("Could not refresh the balance of %s", account.name)
         return
