@@ -4,6 +4,7 @@ import hashlib
 import logging
 from collections import Counter
 from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 
 from requests import RequestException
@@ -13,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.bank.client import GoCardlessBankDataClient
 from app.bank.client_models import GCTransaction
 from app.bank.errors import BankAPIError
-from app.models import Account, PendingTransaction, Transaction
+from app.models import Account, BankIntegration, PendingTransaction, Transaction
 from app.money import to_minor_units
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,41 @@ FIRST_SYNC_DAYS = 90
 # Banks sometimes book a transaction days after its booking date, so each sync
 # looks back a week. The import key stops the overlap from creating duplicates.
 OVERLAP_DAYS = 7
+
+
+@dataclass
+class SyncResult:
+    account: Account
+    new_transactions: int | None = None
+    error: str | None = None
+
+
+def sync_all(db: Session, client: GoCardlessBankDataClient) -> list[SyncResult]:
+    """Sync every linked account. One failing account doesn't stop the others."""
+    accounts = list(
+        db.scalars(
+            select(Account)
+            .join(Account.bank_integration)
+            .where(BankIntegration.linked_at.is_not(None))
+            .order_by(Account.name)
+        )
+    )
+    now = datetime.now(UTC)
+    results = []
+    for account in accounts:
+        expires_at = account.bank_integration.expires_at
+        if expires_at is not None and expires_at <= now:
+            # Don't spend a rate-limited call on a request the bank will refuse.
+            results.append(SyncResult(account, error="Consent expired: renew the link"))
+            continue
+        try:
+            count = sync_account(db, client, account.id)
+        except BankAPIError as e:
+            db.rollback()
+            results.append(SyncResult(account, error=str(e)))
+        else:
+            results.append(SyncResult(account, new_transactions=count))
+    return results
 
 
 def sync_account(db: Session, client: GoCardlessBankDataClient, account_id: int) -> int:

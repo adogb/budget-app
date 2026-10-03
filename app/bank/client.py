@@ -1,5 +1,6 @@
 import logging
 import time
+from functools import cache
 from uuid import uuid4
 
 import requests
@@ -234,3 +235,9 @@ class GoCardlessBankDataClient:
         resp = self.session.get(url, params=params)
         resp.raise_for_status()
         return resp.json()
+
+
+@cache
+def get_bank_client() -> GoCardlessBankDataClient:
+    """One shared client, so its access token is reused between requests."""
+    return GoCardlessBankDataClient()

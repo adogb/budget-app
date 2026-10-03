@@ -9,7 +9,6 @@ accounts are matched to the ones we have, so their transactions stay.
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Literal
 from uuid import uuid4
 
 from requests import RequestException
@@ -19,7 +18,7 @@ from sqlalchemy.orm import Session
 from app.bank.client import GoCardlessBankDataClient
 from app.bank.client_models import GCAccountDetail
 from app.bank.errors import BankAPIError, LinkError, LinkNotFoundError
-from app.bank.schemas import Country, Institution, LinkAccount
+from app.bank.schemas import ConsentStatus, Country, Institution, LinkAccount
 from app.config import BUDGET_CURRENCY
 from app.models import Account, BankIntegration
 from app.money import to_minor_units
@@ -44,8 +43,6 @@ SUPPORTED_COUNTRIES = (
     Country(code="BE", name="Belgium", flag="🇧🇪"),
     Country(code="AT", name="Austria", flag="🇦🇹"),
 )
-
-ConsentStatus = Literal["ok", "expiring", "expired"]
 
 
 def get_institutions(
@@ -180,6 +177,17 @@ def complete_link(
     db.flush()
     _delete_links_without_accounts(db, previous_links - {integration.id, None})
     db.commit()
+
+
+def list_links(db: Session) -> list[BankIntegration]:
+    """Completed links, soonest expiry first."""
+    return list(
+        db.scalars(
+            select(BankIntegration)
+            .where(BankIntegration.linked_at.is_not(None))
+            .order_by(BankIntegration.expires_at)
+        )
+    )
 
 
 def consent_status(expires_at: datetime, now: datetime) -> ConsentStatus:
