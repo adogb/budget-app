@@ -1,283 +1,259 @@
-"""Tests for linking a bank and saving its accounts."""
+"""Tests for linking a bank, choosing accounts and renewing consent."""
 
+from datetime import UTC, date, datetime, timedelta
 from unittest.mock import Mock
 
 import pytest
+from requests import HTTPError
 from sqlalchemy import select
 
+from app.bank.errors import BankAPIError, LinkError, LinkNotFoundError
 from app.bank.linking import (
     SUPPORTED_COUNTRIES,
-    complete_setup,
-    create_bank_link,
-    find_integration,
-    get_account_choices,
+    complete_link,
+    consent_status,
     get_institutions,
-    get_requisition_account_ids,
+    list_link_accounts,
+    start_link,
 )
-from app.models import Account, BankIntegration
+from app.models import Account, BankIntegration, Transaction
 
-
-def all_accounts(db) -> list[Account]:
-    return list(db.scalars(select(Account)))
-
-
-def all_integrations(db) -> list[BankIntegration]:
-    return list(db.scalars(select(BankIntegration)))
+ACCOUNTS = {
+    "acc-1": {"iban": "DK0001", "name": "Checking", "currency": "DKK"},
+    "acc-2": {"iban": "DK0002", "name": "Shared", "currency": "DKK"},
+    "acc-eur": {"iban": "DE0003", "name": "Euro savings", "currency": "EUR"},
+}
 
 
 @pytest.fixture
-def mock_bank_client() -> Mock:
-    """Create a mock bank client."""
+def client() -> Mock:
     client = Mock()
     client.get_institutions.return_value = [
-        {
-            "id": "SANDBOXFINANCE_SFIN0000",
-            "name": "Sandbox Finance",
-            "logo": "https://example.com/logo.png",
-            "countries": ["GB"],
-        }
+        {"id": "BANK_DK", "name": "Danske Test", "logo": "logo.png"}
     ]
     client.create_requisition.return_value = {
-        "id": "test-requisition-123",
+        "id": "req-1",
         "link": "https://bank.example.com/auth",
     }
-    client.get_requisition.return_value = {
-        "id": "test-requisition-123",
-        "accounts": ["acc-123", "acc-456"],
-    }
-    client.get_account_details.return_value = {
-        "account": {
-            "iban": "GB33BUKB20201555555555",
-            "name": "Main Account",
-            "currency": "GBP",
-        }
+    client.get_requisition.return_value = {"id": "req-1", "accounts": list(ACCOUNTS)}
+    client.get_account_details.side_effect = lambda account_id: {
+        "account": ACCOUNTS[account_id]
     }
     client.get_account_balances.return_value = {
-        "balances": [
-            {
-                "balanceAmount": {
-                    "amount": "1000.50",
-                    "currency": "GBP",
-                }
-            }
-        ]
+        "balances": [{"balanceAmount": {"amount": "1000.50", "currency": "DKK"}}]
     }
     return client
 
 
-class TestFindIntegration:
-    def test_find_by_requisition_id(self, db):
-        db.add(
-            BankIntegration(
-                institution_id="SANDBOXFINANCE_SFIN0000",
-                country_code="GB",
-                requisition_id="unique-req-456",
-            )
+def add_link(db, reference="ref-1", requisition_id="req-1", linked=False):
+    integration = BankIntegration(
+        institution_id="BANK_DK",
+        country_code="DK",
+        requisition_id=requisition_id,
+        reference=reference,
+        linked_at=datetime.now(UTC) if linked else None,
+    )
+    db.add(integration)
+    db.commit()
+    return integration
+
+
+def all_accounts(db) -> list[Account]:
+    return list(db.scalars(select(Account).order_by(Account.id)))
+
+
+# Banks
+
+
+def test_denmark_is_listed_first():
+    assert SUPPORTED_COUNTRIES[0].code == "DK"
+
+
+def test_get_institutions(client):
+    institutions = get_institutions(client, "DK")
+
+    assert [i.name for i in institutions] == ["Danske Test"]
+    assert institutions[0].countries == []
+    client.get_institutions.assert_called_once_with("DK")
+
+
+def test_get_institutions_error(client):
+    client.get_institutions.side_effect = HTTPError("503")
+
+    with pytest.raises(BankAPIError, match="Could not list banks"):
+        get_institutions(client, "DK")
+
+
+# Starting a link
+
+
+def test_start_link_saves_an_unlinked_integration(db, client):
+    link = start_link(db, client, "BANK_DK", "DK", "http://localhost:5173/cb")
+
+    assert link == "https://bank.example.com/auth"
+    integration = db.scalars(select(BankIntegration)).one()
+    assert integration.requisition_id == "req-1"
+    assert integration.linked_at is None
+    client.create_requisition.assert_called_once_with(
+        redirect_url="http://localhost:5173/cb",
+        institution_id="BANK_DK",
+        reference=integration.reference,
+    )
+
+
+def test_start_deletes_only_unlinked_integrations(db, client):
+    add_link(db, reference="abandoned", requisition_id="req-old")
+    add_link(db, reference="linked", requisition_id="req-linked", linked=True)
+
+    start_link(db, client, "BANK_DK", "DK", "http://localhost:5173/cb")
+
+    references = set(db.scalars(select(BankIntegration.reference)))
+    assert "abandoned" not in references
+    assert "linked" in references
+    assert len(references) == 2
+
+
+# Choosing accounts
+
+
+def test_list_link_accounts(db, client):
+    add_link(db)
+
+    choices = list_link_accounts(db, client, "ref-1")
+
+    assert [(c.name, c.eligible, c.already_linked) for c in choices] == [
+        ("Checking", True, False),
+        ("Shared", True, False),
+        ("Euro savings", False, False),
+    ]
+
+
+def test_list_marks_accounts_we_already_have(db, client):
+    add_link(db)
+    db.add(Account(name="Old", bank_name="B", currency="DKK", iban="DK0002"))
+    db.commit()
+
+    choices = list_link_accounts(db, client, "ref-1")
+
+    assert [c.already_linked for c in choices] == [False, True, False]
+
+
+def test_list_skips_malformed_details(db, client):
+    add_link(db)
+    client.get_requisition.return_value = {"accounts": ["acc-1", "acc-bad"]}
+    client.get_account_details.side_effect = [
+        {"account": ACCOUNTS["acc-1"]},
+        {"unexpected": {}},
+    ]
+
+    choices = list_link_accounts(db, client, "ref-1")
+
+    assert [c.external_id for c in choices] == ["acc-1"]
+
+
+def test_unknown_reference(db, client):
+    with pytest.raises(LinkNotFoundError):
+        list_link_accounts(db, client, "nope")
+
+
+# Completing a link
+
+
+def test_complete_creates_accounts_and_sets_expiry(db, client):
+    integration = add_link(db)
+
+    complete_link(db, client, "ref-1", ["acc-1", "acc-2"])
+
+    accounts = all_accounts(db)
+    assert [a.name for a in accounts] == ["Checking", "Shared"]
+    assert all(a.bank_name == "Danske Test" for a in accounts)
+    assert all(a.balance_minor == 100050 for a in accounts)
+    assert all(a.bank_integration_id == integration.id for a in accounts)
+    db.refresh(integration)
+    assert integration.linked_at is not None
+    assert integration.expires_at == integration.linked_at + timedelta(days=90)
+
+
+def test_non_dkk_refused(db, client):
+    add_link(db)
+
+    with pytest.raises(LinkError, match="Euro savings is in EUR"):
+        complete_link(db, client, "ref-1", ["acc-1", "acc-eur"])
+
+    assert all_accounts(db) == []
+
+
+def test_account_not_in_the_link_refused(db, client):
+    add_link(db)
+
+    with pytest.raises(LinkError, match="Not part of this bank link: acc-other"):
+        complete_link(db, client, "ref-1", ["acc-other"])
+
+
+def test_nothing_chosen_refused(db, client):
+    add_link(db)
+
+    with pytest.raises(LinkError, match="at least one"):
+        complete_link(db, client, "ref-1", [])
+
+
+def test_bank_error_saves_nothing(db, client):
+    integration = add_link(db)
+    client.get_account_balances.side_effect = [
+        {"balances": []},
+        HTTPError("429"),
+    ]
+
+    with pytest.raises(BankAPIError, match="Could not read the balance"):
+        complete_link(db, client, "ref-1", ["acc-1", "acc-2"])
+
+    assert all_accounts(db) == []
+    db.refresh(integration)
+    assert integration.linked_at is None
+
+
+def test_renewal_matches_by_iban_keeps_transactions(db, client):
+    old_link = add_link(db, reference="old", requisition_id="req-old", linked=True)
+    account = Account(
+        name="Checking",
+        bank_name="Danske Test",
+        currency="DKK",
+        iban="DK0001",
+        external_id="acc-1-expired",
+        bank_integration_id=old_link.id,
+    )
+    db.add(account)
+    db.commit()
+    db.add(
+        Transaction(
+            account_id=account.id,
+            amount_minor=-100,
+            currency="DKK",
+            description="Coffee",
+            booking_date=date(2026, 9, 1),
         )
-        db.commit()
+    )
+    db.commit()
+    new_link = add_link(db, reference="new", requisition_id="req-new")
 
-        found = find_integration(db, "unique-req-456")
+    complete_link(db, client, "new", ["acc-1"])
 
-        assert found is not None
-        assert found.requisition_id == "unique-req-456"
-        assert found.institution_id == "SANDBOXFINANCE_SFIN0000"
-
-
-class TestLinking:
-    def test_supported_countries(self):
-        """Test getting list of supported countries."""
-        countries = SUPPORTED_COUNTRIES
-
-        assert len(countries) > 0
-        assert any(c.code == "GB" for c in countries)
-        assert any(c.code == "DE" for c in countries)
-
-    def test_get_institutions_for_country(self, mock_bank_client):
-        """Test getting institutions for a country."""
-        institutions = get_institutions(mock_bank_client, "GB")
-
-        assert len(institutions) == 1
-        assert institutions[0].id == "SANDBOXFINANCE_SFIN0000"
-        assert institutions[0].name == "Sandbox Finance"
-        mock_bank_client.get_institutions.assert_called_once_with("GB")
-
-    def test_institution_without_logo_or_countries(self, mock_bank_client):
-        mock_bank_client.get_institutions.return_value = [
-            {"id": "BANK_X", "name": "Bank X"}
-        ]
-
-        institutions = get_institutions(mock_bank_client, "DK")
-
-        assert institutions[0].logo == ""
-        assert institutions[0].countries == []
-
-    def test_account_choices_skip_malformed_details(self, mock_bank_client):
-        mock_bank_client.get_account_details.side_effect = [
-            {"account": {"name": "Checking"}},
-            {"unexpected": {}},
-        ]
-
-        choices = get_account_choices(mock_bank_client, ["acc-1", "acc-2"])
-
-        assert [c.id for c in choices] == ["acc-1"]
-
-    def test_create_bank_link(self, mock_bank_client):
-        """Test creating a bank link."""
-        result = create_bank_link(
-            mock_bank_client,
-            "SANDBOXFINANCE_SFIN0000",
-            "http://localhost:8000/callback",
-        )
-
-        assert result["link"] == "https://bank.example.com/auth"
-        assert result["requisition_id"] == "test-requisition-123"
-        mock_bank_client.create_requisition.assert_called_once()
-
-    def test_get_requisition_accounts(self, mock_bank_client):
-        """Test getting accounts from requisition."""
-        accounts = get_requisition_account_ids(mock_bank_client, "test-requisition-123")
-
-        assert accounts == ["acc-123", "acc-456"]
-        mock_bank_client.get_requisition.assert_called_once_with("test-requisition-123")
-
-    def test_complete_setup_creates_integration_and_accounts(
-        self, db, mock_bank_client
-    ):
-        """complete_setup saves the bank integration and the chosen accounts."""
-
-        # Mock account details and balances for both accounts
-        def mock_get_account_details(account_id):
-            return {
-                "account": {
-                    "iban": f"GB33BUKB2020155555555{account_id[-1]}",
-                    "name": f"Account {account_id}",
-                    "currency": "GBP",
-                }
-            }
-
-        def mock_get_account_balances(account_id):
-            return {
-                "balances": [
-                    {"balanceAmount": {"amount": "1000.00", "currency": "GBP"}}
-                ]
-            }
-
-        mock_bank_client.get_account_details.side_effect = mock_get_account_details
-        mock_bank_client.get_account_balances.side_effect = mock_get_account_balances
-
-        # Complete setup
-        complete_setup(
-            db,
-            mock_bank_client,
-            requisition_id="test-req-123",
-            institution_id="SANDBOXFINANCE_SFIN0000",
-            selected_account_ids=["acc-123", "acc-456"],
-            country_code="GB",
-        )
-
-        # Check bank integration was created
-        integration = find_integration(db, "test-req-123")
-
-        assert integration is not None
-        assert integration.institution_id == "SANDBOXFINANCE_SFIN0000"
-        assert integration.country_code == "GB"
-
-        # Check accounts were created
-        accounts = all_accounts(db)
-
-        assert len(accounts) == 2
-        assert any(acc.name == "Account acc-123" for acc in accounts)
-        assert any(acc.name == "Account acc-456" for acc in accounts)
-        assert all(acc.bank_name == "Sandbox Finance" for acc in accounts)
-        assert all(acc.balance_minor == 100000 for acc in accounts)
-
-    def test_complete_setup_updates_existing_integration(self, db, mock_bank_client):
-        """complete_setup must not create a duplicate for an existing requisition."""
-        # Create an existing integration
-        existing = BankIntegration(
-            institution_id="SANDBOXFINANCE_SFIN0000",
-            country_code="GB",
-            requisition_id="test-req-123",
-        )
-        db.add(existing)
-        db.commit()
-
-        # Mock minimal account data
-        mock_bank_client.get_account_details.return_value = {
-            "account": {"iban": "GB123", "name": "Test", "currency": "GBP"}
-        }
-        mock_bank_client.get_account_balances.return_value = {
-            "balances": [{"balanceAmount": {"amount": "100", "currency": "GBP"}}]
-        }
-
-        # Complete setup with same requisition
-        complete_setup(
-            db,
-            mock_bank_client,
-            requisition_id="test-req-123",
-            institution_id="SANDBOXFINANCE_SFIN0000",
-            selected_account_ids=["acc-999"],
-            country_code="GB",
-        )
-
-        # Check that the existing integration was reused, not duplicated
-        integrations = all_integrations(db)
-        assert len(integrations) == 1
-        assert integrations[0].requisition_id == "test-req-123"
+    accounts = all_accounts(db)
+    assert [a.id for a in accounts] == [account.id]
+    assert accounts[0].external_id == "acc-1"
+    assert accounts[0].bank_integration_id == new_link.id
+    assert len(accounts[0].transactions) == 1
+    assert list(db.scalars(select(BankIntegration.reference))) == ["new"]
 
 
-class TestCompleteSetupFlow:
-    """Integration tests for the complete setup flow."""
+# Consent status
 
-    def test_full_setup_flow(self, db, mock_bank_client):
-        """Test the complete setup flow from country selection to completion."""
-        # Step 1: Get supported countries
-        countries = SUPPORTED_COUNTRIES
-        assert len(countries) > 0
 
-        # Step 2: Get institutions for GB
-        institutions = get_institutions(mock_bank_client, "GB")
-        assert len(institutions) == 1
-        selected_institution = institutions[0].id
+@pytest.mark.parametrize(
+    ("days_left", "expected"),
+    [(30, "ok"), (7.5, "ok"), (7, "expiring"), (1, "expiring"), (0, "expired")],
+)
+def test_consent_status(days_left, expected):
+    now = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
 
-        # Step 3: Create bank link
-        link_data = create_bank_link(mock_bank_client, selected_institution)
-        requisition_id = link_data["requisition_id"]
-        assert requisition_id == "test-requisition-123"
-
-        # Step 4: Get accounts from requisition
-        account_ids = get_requisition_account_ids(mock_bank_client, requisition_id)
-        assert len(account_ids) == 2
-
-        # Step 5: Get account details for selection
-        account_details = get_account_choices(mock_bank_client, account_ids)
-        assert len(account_details) == 2
-
-        # Mock for complete setup - return different IBANs for each account
-        def mock_get_account_details(account_id):
-            return {
-                "account": {
-                    "iban": f"GB33BUKB2020155555555{account_id[-1]}",
-                    "name": f"Account {account_id}",
-                    "currency": "GBP",
-                }
-            }
-
-        mock_bank_client.get_account_details.side_effect = mock_get_account_details
-        # Step 6: Complete setup
-        complete_setup(
-            db,
-            mock_bank_client,
-            requisition_id=requisition_id,
-            institution_id=selected_institution,
-            selected_account_ids=account_ids,
-            country_code="GB",
-        )
-
-        # Verify database state
-        integration = find_integration(db, requisition_id)
-        assert integration is not None
-        assert integration.institution_id == selected_institution
-
-        accounts = all_accounts(db)
-        assert len(accounts) == 2
+    assert consent_status(now + timedelta(days=days_left), now) == expected

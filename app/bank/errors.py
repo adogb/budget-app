@@ -12,6 +12,14 @@ class BankAPIError(Exception):
         return cls(f"{action}: {_reason(error)}")
 
 
+class LinkNotFoundError(Exception):
+    """No bank link has this reference."""
+
+
+class LinkError(Exception):
+    """The chosen accounts can't be linked, e.g. one isn't in DKK."""
+
+
 def _reason(error: RequestException) -> str:
     """GoCardless explains errors in `summary` and `detail`; prefer those."""
     if error.response is None:
