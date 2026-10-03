@@ -10,7 +10,7 @@ from sqlalchemy import select
 from app.bank.client import GoCardlessBankDataClient
 from app.bank.errors import BankAPIError
 from app.bank.sync import import_keys, sync_account, sync_start
-from app.models import Account, Transaction
+from app.models import Account, PendingTransaction, Transaction
 
 
 @pytest.fixture
@@ -156,15 +156,54 @@ def test_empty_response(db, test_account, test_transactions, mock_bank_client):
     assert sync_account(db, mock_bank_client, test_account.id) == 0
 
 
-def test_pending_rows_are_not_imported_as_transactions(
-    db, test_account, mock_bank_client
-):
+# Pending
+
+
+def pending_descriptions(db) -> list[str]:
+    return list(db.scalars(select(PendingTransaction.description)))
+
+
+def test_booked_only_into_transactions(db, test_account, mock_bank_client):
     mock_bank_client.get_account_transactions.return_value = bank_response(
-        booked=[booked("ext_booked")], pending=[booked("ext_pending")]
+        booked=[booked("ext_booked")],
+        pending=[booked("ext_pending", remittanceInformationUnstructured="Taxi")],
     )
 
     assert sync_account(db, mock_bank_client, test_account.id) == 1
     assert [t.import_key for t in stored(db)] == ["ext_booked"]
+    assert pending_descriptions(db) == ["Taxi"]
+
+
+def test_pending_replaced_each_sync(db, test_account, mock_bank_client):
+    taxi = booked("p-1", remittanceInformationUnstructured="Taxi")
+    mock_bank_client.get_account_transactions.return_value = bank_response(
+        pending=[taxi]
+    )
+    sync_account(db, mock_bank_client, test_account.id)
+
+    # The bank has booked the taxi under a new ID; it is no longer pending.
+    mock_bank_client.get_account_transactions.return_value = bank_response(
+        booked=[booked("b-1", remittanceInformationUnstructured="Taxi")]
+    )
+    sync_account(db, mock_bank_client, test_account.id)
+
+    assert pending_descriptions(db) == []
+    assert [t.description for t in stored(db)] == ["Taxi"]
+
+
+def test_pending_without_booking_date_keeps_the_window(
+    db, test_account, test_transactions, mock_bank_client
+):
+    undated = booked("p-1")
+    del undated["bookingDate"]
+    mock_bank_client.get_account_transactions.return_value = bank_response(
+        pending=[undated]
+    )
+
+    sync_account(db, mock_bank_client, test_account.id)
+
+    assert db.scalars(select(PendingTransaction.booking_date)).one() is None
+    assert sync_start(db, test_account.id) == date(2026, 3, 27)
 
 
 # Dedup keys

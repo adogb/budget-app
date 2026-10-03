@@ -7,13 +7,13 @@ from collections.abc import Iterable
 from datetime import UTC, date, datetime, timedelta
 
 from requests import RequestException
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.bank.client import GoCardlessBankDataClient
 from app.bank.client_models import GCTransaction
 from app.bank.errors import BankAPIError
-from app.models import Account, Transaction
+from app.models import Account, PendingTransaction, Transaction
 from app.money import to_minor_units
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,8 @@ OVERLAP_DAYS = 7
 
 
 def sync_account(db: Session, client: GoCardlessBankDataClient, account_id: int) -> int:
-    """Import new booked transactions, refresh the balance, return the new count."""
+    """Import new booked transactions, replace the pending ones, refresh the
+    balance. Returns the number of new booked transactions."""
     account = db.get(Account, account_id)
     if account is None:
         raise ValueError(f"Account {account_id} not found")
@@ -42,10 +43,13 @@ def sync_account(db: Session, client: GoCardlessBankDataClient, account_id: int)
         raise BankAPIError.from_request(
             f"Could not fetch transactions for {account.name}", e
         ) from e
-    booked = response.get("transactions", {}).get("booked", [])
+    bank_transactions = response.get("transactions", {})
 
-    new_transactions = _new_transactions(db, account, booked)
+    new_transactions = _new_transactions(
+        db, account, bank_transactions.get("booked", [])
+    )
     db.add_all(new_transactions)
+    _replace_pending(db, account, bank_transactions.get("pending", []))
     _refresh_balance(client, account)
     account.last_synced_at = datetime.now(UTC)
     db.commit()
@@ -133,6 +137,28 @@ def _to_transaction(data: GCTransaction, account: Account, key: str) -> Transact
         booking_date=date.fromisoformat(data.get("bookingDate") or data["valueDate"]),
         value_date=date.fromisoformat(value_date) if value_date else None,
     )
+
+
+def _replace_pending(db: Session, account: Account, rows: list[GCTransaction]) -> None:
+    """Pending IDs change once booked, so keep only the bank's current list."""
+    db.execute(
+        delete(PendingTransaction).where(PendingTransaction.account_id == account.id)
+    )
+    for data in rows:
+        amount = data.get("transactionAmount", {})
+        booking_date = data.get("bookingDate")
+        value_date = data.get("valueDate")
+        db.add(
+            PendingTransaction(
+                account_id=account.id,
+                amount_minor=to_minor_units(amount.get("amount", "0")),
+                currency=amount.get("currency", account.currency),
+                description=_description(data),
+                payee=_payee(data),
+                booking_date=date.fromisoformat(booking_date) if booking_date else None,
+                value_date=date.fromisoformat(value_date) if value_date else None,
+            )
+        )
 
 
 def _description(data: GCTransaction) -> str:
