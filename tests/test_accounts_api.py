@@ -22,5 +22,7 @@ def test_lists_accounts(client, db):
             "bank_name": "Test Bank",
             "iban": "DK1234",
             "balance": {"amount": 1234550, "currency": "DKK"},
+            "bank_integration_id": None,
+            "last_synced_at": None,
         }
     ]

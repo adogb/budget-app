@@ -1,6 +1,6 @@
 from datetime import date
 
-from app.models import Account, Transaction
+from app.models import Account, PendingTransaction, Transaction
 
 
 def add_account(db, name="Checking") -> Account:
@@ -50,3 +50,29 @@ def test_filter_by_account(client, db):
     body = client.get("/api/transactions", params={"account_id": shared.id}).json()
 
     assert [t["account_id"] for t in body] == [shared.id]
+
+
+def test_pending_listed_separately(client, db):
+    account = add_account(db)
+    add_transaction(db, account, date(2026, 9, 1))
+    for booking_date, description in [
+        (date(2026, 9, 2), "Older"),
+        (None, "Undated"),
+        (date(2026, 9, 3), "Newer"),
+    ]:
+        db.add(
+            PendingTransaction(
+                account_id=account.id,
+                amount_minor=-4900,
+                currency="DKK",
+                description=description,
+                booking_date=booking_date,
+            )
+        )
+    db.commit()
+
+    pending = client.get("/api/transactions/pending").json()
+
+    assert [p["description"] for p in pending] == ["Undated", "Newer", "Older"]
+    assert pending[0]["amount"] == {"amount": -4900, "currency": "DKK"}
+    assert len(client.get("/api/transactions").json()) == 1
