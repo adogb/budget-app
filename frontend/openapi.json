@@ -30,6 +30,257 @@
         }
       }
     },
+    "/api/bank/countries": {
+      "get": {
+        "tags": [
+          "bank"
+        ],
+        "summary": "Get Countries",
+        "operationId": "get_countries_api_bank_countries_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Country"
+                  },
+                  "type": "array",
+                  "title": "Response Get Countries Api Bank Countries Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bank/institutions": {
+      "get": {
+        "tags": [
+          "bank"
+        ],
+        "summary": "Get Institutions",
+        "operationId": "get_institutions_api_bank_institutions_get",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Country"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Institution"
+                  },
+                  "title": "Response Get Institutions Api Bank Institutions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bank/links": {
+      "get": {
+        "tags": [
+          "bank"
+        ],
+        "summary": "Get Links",
+        "operationId": "get_links_api_bank_links_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BankLinkOut"
+                  },
+                  "type": "array",
+                  "title": "Response Get Links Api Bank Links Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "bank"
+        ],
+        "summary": "Start Link",
+        "operationId": "start_link_api_bank_links_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartLinkIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartLinkOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bank/links/{reference}/accounts": {
+      "get": {
+        "tags": [
+          "bank"
+        ],
+        "summary": "Get Link Accounts",
+        "operationId": "get_link_accounts_api_bank_links__reference__accounts_get",
+        "parameters": [
+          {
+            "name": "reference",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Reference"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LinkAccount"
+                  },
+                  "title": "Response Get Link Accounts Api Bank Links  Reference  Accounts Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bank/links/{reference}/complete": {
+      "post": {
+        "tags": [
+          "bank"
+        ],
+        "summary": "Complete Link",
+        "operationId": "complete_link_api_bank_links__reference__complete_post",
+        "parameters": [
+          {
+            "name": "reference",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Reference"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteLinkIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bank/sync": {
+      "post": {
+        "tags": [
+          "bank"
+        ],
+        "summary": "Sync Accounts",
+        "operationId": "sync_accounts_api_bank_sync_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SyncResultOut"
+                  },
+                  "type": "array",
+                  "title": "Response Sync Accounts Api Bank Sync Post"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/transactions": {
       "get": {
         "tags": [
@@ -82,6 +333,31 @@
           }
         }
       }
+    },
+    "/api/transactions/pending": {
+      "get": {
+        "tags": [
+          "transactions"
+        ],
+        "summary": "Get Pending Transactions",
+        "operationId": "get_pending_transactions_api_transactions_pending_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PendingTransactionOut"
+                  },
+                  "type": "array",
+                  "title": "Response Get Pending Transactions Api Transactions Pending Get"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -113,6 +389,29 @@
           },
           "balance": {
             "$ref": "#/components/schemas/Money"
+          },
+          "bank_integration_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Integration Id"
+          },
+          "last_synced_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Synced At"
           }
         },
         "type": "object",
@@ -121,9 +420,108 @@
           "name",
           "bank_name",
           "iban",
-          "balance"
+          "balance",
+          "bank_integration_id",
+          "last_synced_at"
         ],
         "title": "AccountOut"
+      },
+      "BankLinkOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "institution_id": {
+            "type": "string",
+            "title": "Institution Id"
+          },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code"
+          },
+          "bank_name": {
+            "type": "string",
+            "title": "Bank Name"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "consent_status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "expiring",
+              "expired"
+            ],
+            "title": "Consent Status"
+          },
+          "account_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Account Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "institution_id",
+          "country_code",
+          "bank_name",
+          "expires_at",
+          "consent_status",
+          "account_ids"
+        ],
+        "title": "BankLinkOut"
+      },
+      "CompleteLinkIn": {
+        "properties": {
+          "external_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "External Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "external_ids"
+        ],
+        "title": "CompleteLinkIn"
+      },
+      "Country": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "flag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flag"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name"
+        ],
+        "title": "Country"
       },
       "HTTPValidationError": {
         "properties": {
@@ -137,6 +535,83 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "Institution": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "logo": {
+            "type": "string",
+            "title": "Logo",
+            "default": ""
+          },
+          "countries": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Countries",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "Institution"
+      },
+      "LinkAccount": {
+        "properties": {
+          "external_id": {
+            "type": "string",
+            "title": "External Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "iban": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Iban"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "eligible": {
+            "type": "boolean",
+            "title": "Eligible"
+          },
+          "already_linked": {
+            "type": "boolean",
+            "title": "Already Linked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "external_id",
+          "name",
+          "iban",
+          "currency",
+          "eligible",
+          "already_linked"
+        ],
+        "title": "LinkAccount",
+        "description": "An account the bank shared, offered for the user to tick."
       },
       "Money": {
         "properties": {
@@ -156,6 +631,139 @@
         ],
         "title": "Money",
         "description": "An amount in the currency's minor unit (\u00f8re for DKK). Never a float."
+      },
+      "PendingTransactionOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "account_id": {
+            "type": "integer",
+            "title": "Account Id"
+          },
+          "booking_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Booking Date"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "payee": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payee"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/Money"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "account_id",
+          "booking_date",
+          "description",
+          "payee",
+          "amount"
+        ],
+        "title": "PendingTransactionOut",
+        "description": "Read-only: not yet booked, so it can't be categorised (spec D4)."
+      },
+      "StartLinkIn": {
+        "properties": {
+          "institution_id": {
+            "type": "string",
+            "title": "Institution Id"
+          },
+          "country_code": {
+            "type": "string",
+            "title": "Country Code"
+          },
+          "redirect_url": {
+            "type": "string",
+            "minLength": 1,
+            "format": "uri",
+            "title": "Redirect Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "institution_id",
+          "country_code",
+          "redirect_url"
+        ],
+        "title": "StartLinkIn"
+      },
+      "StartLinkOut": {
+        "properties": {
+          "link": {
+            "type": "string",
+            "title": "Link"
+          }
+        },
+        "type": "object",
+        "required": [
+          "link"
+        ],
+        "title": "StartLinkOut"
+      },
+      "SyncResultOut": {
+        "properties": {
+          "account_id": {
+            "type": "integer",
+            "title": "Account Id"
+          },
+          "account_name": {
+            "type": "string",
+            "title": "Account Name"
+          },
+          "new_transactions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Transactions"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_id",
+          "account_name",
+          "new_transactions",
+          "error"
+        ],
+        "title": "SyncResultOut"
       },
       "TransactionOut": {
         "properties": {
@@ -188,6 +796,17 @@
             "type": "string",
             "title": "Description"
           },
+          "payee": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payee"
+          },
           "notes": {
             "anyOf": [
               {
@@ -210,6 +829,7 @@
           "booking_date",
           "value_date",
           "description",
+          "payee",
           "notes",
           "amount"
         ],

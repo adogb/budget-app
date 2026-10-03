@@ -21,6 +21,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/bank/countries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Countries */
+        get: operations["get_countries_api_bank_countries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/institutions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Institutions */
+        get: operations["get_institutions_api_bank_institutions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Links */
+        get: operations["get_links_api_bank_links_get"];
+        put?: never;
+        /** Start Link */
+        post: operations["start_link_api_bank_links_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/links/{reference}/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Link Accounts */
+        get: operations["get_link_accounts_api_bank_links__reference__accounts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/links/{reference}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete Link */
+        post: operations["complete_link_api_bank_links__reference__complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/bank/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sync Accounts */
+        post: operations["sync_accounts_api_bank_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/transactions": {
         parameters: {
             query?: never;
@@ -30,6 +133,23 @@ export interface paths {
         };
         /** Get Transactions */
         get: operations["get_transactions_api_transactions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/transactions/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Pending Transactions */
+        get: operations["get_pending_transactions_api_transactions_pending_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -53,11 +173,87 @@ export interface components {
             /** Iban */
             iban: string | null;
             balance: components["schemas"]["Money"];
+            /** Bank Integration Id */
+            bank_integration_id: number | null;
+            /** Last Synced At */
+            last_synced_at: string | null;
+        };
+        /** BankLinkOut */
+        BankLinkOut: {
+            /** Id */
+            id: number;
+            /** Institution Id */
+            institution_id: string;
+            /** Country Code */
+            country_code: string;
+            /** Bank Name */
+            bank_name: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Consent Status
+             * @enum {string}
+             */
+            consent_status: "ok" | "expiring" | "expired";
+            /** Account Ids */
+            account_ids: number[];
+        };
+        /** CompleteLinkIn */
+        CompleteLinkIn: {
+            /** External Ids */
+            external_ids: string[];
+        };
+        /** Country */
+        Country: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /** Flag */
+            flag?: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** Institution */
+        Institution: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Logo
+             * @default
+             */
+            logo: string;
+            /**
+             * Countries
+             * @default []
+             */
+            countries: string[];
+        };
+        /**
+         * LinkAccount
+         * @description An account the bank shared, offered for the user to tick.
+         */
+        LinkAccount: {
+            /** External Id */
+            external_id: string;
+            /** Name */
+            name: string;
+            /** Iban */
+            iban: string | null;
+            /** Currency */
+            currency: string;
+            /** Eligible */
+            eligible: boolean;
+            /** Already Linked */
+            already_linked: boolean;
         };
         /**
          * Money
@@ -68,6 +264,51 @@ export interface components {
             amount: number;
             /** Currency */
             currency: string;
+        };
+        /**
+         * PendingTransactionOut
+         * @description Read-only: not yet booked, so it can't be categorised (spec D4).
+         */
+        PendingTransactionOut: {
+            /** Id */
+            id: number;
+            /** Account Id */
+            account_id: number;
+            /** Booking Date */
+            booking_date: string | null;
+            /** Description */
+            description: string;
+            /** Payee */
+            payee: string | null;
+            amount: components["schemas"]["Money"];
+        };
+        /** StartLinkIn */
+        StartLinkIn: {
+            /** Institution Id */
+            institution_id: string;
+            /** Country Code */
+            country_code: string;
+            /**
+             * Redirect Url
+             * Format: uri
+             */
+            redirect_url: string;
+        };
+        /** StartLinkOut */
+        StartLinkOut: {
+            /** Link */
+            link: string;
+        };
+        /** SyncResultOut */
+        SyncResultOut: {
+            /** Account Id */
+            account_id: number;
+            /** Account Name */
+            account_name: string;
+            /** New Transactions */
+            new_transactions: number | null;
+            /** Error */
+            error: string | null;
         };
         /** TransactionOut */
         TransactionOut: {
@@ -84,6 +325,8 @@ export interface components {
             value_date: string | null;
             /** Description */
             description: string;
+            /** Payee */
+            payee: string | null;
             /** Notes */
             notes: string | null;
             amount: components["schemas"]["Money"];
@@ -130,6 +373,194 @@ export interface operations {
             };
         };
     };
+    get_countries_api_bank_countries_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Country"][];
+                };
+            };
+        };
+    };
+    get_institutions_api_bank_institutions_get: {
+        parameters: {
+            query: {
+                country: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Institution"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_links_api_bank_links_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankLinkOut"][];
+                };
+            };
+        };
+    };
+    start_link_api_bank_links_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartLinkIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StartLinkOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_link_accounts_api_bank_links__reference__accounts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reference: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkAccount"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_link_api_bank_links__reference__complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reference: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteLinkIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sync_accounts_api_bank_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncResultOut"][];
+                };
+            };
+        };
+    };
     get_transactions_api_transactions_get: {
         parameters: {
             query?: {
@@ -157,6 +588,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pending_transactions_api_transactions_pending_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingTransactionOut"][];
                 };
             };
         };
