@@ -23,6 +23,9 @@ project_requirements.md
 # Github Copilot instructions
 .github/instructions/
 
+# Personal Claude Code settings
+.claude/settings.local.json
+
 # Playwright CLI artifacts
 .playwright-cli/
 
