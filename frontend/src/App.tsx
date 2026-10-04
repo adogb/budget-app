@@ -1,5 +1,7 @@
 import { Navigate, NavLink, Route, Routes } from 'react-router'
 import AccountsPage from './pages/AccountsPage.tsx'
+import LinkBankPage from './pages/LinkBankPage.tsx'
+import LinkCallbackPage from './pages/LinkCallbackPage.tsx'
 import TransactionsPage from './pages/TransactionsPage.tsx'
 
 export default function App() {
@@ -20,6 +22,8 @@ export default function App() {
           <Route path="/" element={<Navigate to="/transactions" replace />} />
           <Route path="/transactions" element={<TransactionsPage />} />
           <Route path="/accounts" element={<AccountsPage />} />
+          <Route path="/link" element={<LinkBankPage />} />
+          <Route path="/link/callback" element={<LinkCallbackPage />} />
         </Routes>
       </main>
     </div>
