@@ -18,7 +18,6 @@ export default function AccountsPage() {
           Link a bank
         </Link>
       </div>
-      <SyncPanel />
       <AccountsContent />
     </section>
   )
@@ -90,6 +89,7 @@ function AccountsContent() {
   }
   return (
     <div className="space-y-6">
+      <SyncPanel />
       {links.data.map((link) => (
         <BankLinkCard
           key={link.id}
