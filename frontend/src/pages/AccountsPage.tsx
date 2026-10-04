@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { type Account, fetchAccounts } from '../api/accounts'
-import { type BankLink, fetchBankLinks, type SyncResult, syncAll } from '../api/bank'
+import { type BankLink, fetchBankLinks, type SyncResult, startLink, syncAll } from '../api/bank'
+import ConsentBadge from '../components/ConsentBadge'
 import Money from '../components/Money'
 import { formatDateTime } from '../lib/dates'
 
@@ -103,8 +104,10 @@ function AccountsContent() {
 function BankLinkCard({ link, accounts }: { link: BankLink; accounts: Account[] }) {
   return (
     <div className="rounded border border-gray-200 bg-white">
-      <div className="border-b border-gray-200 px-3 py-2">
+      <div className="flex items-center gap-3 border-b border-gray-200 px-3 py-2">
         <h2 className="font-medium">{link.bank_name}</h2>
+        <ConsentBadge link={link} />
+        {link.consent_status !== 'ok' && <RenewButton link={link} />}
       </div>
       <ul>
         {accounts.map((account) => (
@@ -112,6 +115,28 @@ function BankLinkCard({ link, accounts }: { link: BankLink; accounts: Account[] 
         ))}
       </ul>
     </div>
+  )
+}
+
+// Renewing is linking the same bank again. On the way back, the accounts are
+// matched to the ones you have, so their transactions stay.
+function RenewButton({ link }: { link: BankLink }) {
+  const renew = useMutation({
+    mutationFn: () => startLink(link.institution_id, link.country_code),
+    onSuccess: (url) => window.location.assign(url),
+  })
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => renew.mutate()}
+        disabled={renew.isPending}
+        className="ml-auto rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-100 disabled:opacity-50"
+      >
+        {renew.isPending ? 'Opening your bank…' : 'Renew'}
+      </button>
+      {renew.isError && <span className="text-sm text-red-700">{renew.error.message}</span>}
+    </>
   )
 }
 

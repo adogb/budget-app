@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { fetchTransactions, type Transaction } from '../api/transactions'
+import ConsentBanner from '../components/ConsentBanner'
 import Money from '../components/Money'
 
 export default function TransactionsPage() {
   return (
     <section>
       <h1 className="mb-4 text-xl font-semibold">Transactions</h1>
+      <ConsentBanner />
       <TransactionsContent />
     </section>
   )
