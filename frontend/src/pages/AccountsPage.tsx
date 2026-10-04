@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { type Account, fetchAccounts } from '../api/accounts'
-import { type BankLink, fetchBankLinks } from '../api/bank'
+import { type BankLink, fetchBankLinks, type SyncResult, syncAll } from '../api/bank'
 import Money from '../components/Money'
 import { formatDateTime } from '../lib/dates'
 
@@ -17,8 +17,57 @@ export default function AccountsPage() {
           Link a bank
         </Link>
       </div>
+      <SyncPanel />
       <AccountsContent />
     </section>
+  )
+}
+
+// GoCardless allows only a few calls per account per day, so syncing only
+// happens when you press the button.
+function SyncPanel() {
+  const queryClient = useQueryClient()
+  const sync = useMutation({
+    mutationFn: syncAll,
+    onSuccess: () => {
+      for (const key of ['accounts', 'bank-links', 'transactions', 'pending-transactions']) {
+        queryClient.invalidateQueries({ queryKey: [key] })
+      }
+    },
+  })
+
+  return (
+    <div className="mb-6">
+      <button
+        type="button"
+        onClick={() => sync.mutate()}
+        disabled={sync.isPending}
+        className="rounded bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-50"
+      >
+        {sync.isPending ? 'Syncing…' : 'Sync with bank'}
+      </button>
+      {sync.isError && (
+        <p className="mt-2 text-sm text-red-700">Sync failed: {sync.error.message}</p>
+      )}
+      {sync.isSuccess && <SyncSummary results={sync.data} />}
+    </div>
+  )
+}
+
+function SyncSummary({ results }: { results: SyncResult[] }) {
+  const imported = results.reduce((sum, r) => sum + (r.new_transactions ?? 0), 0)
+  const failed = results.filter((r) => r.error !== null)
+  return (
+    <div className="mt-2 text-sm">
+      <p className="text-gray-700">
+        Imported {imported} new transaction{imported === 1 ? '' : 's'}.
+      </p>
+      {failed.map((r) => (
+        <p key={r.account_id} className="text-red-700">
+          {r.account_name}: {r.error}
+        </p>
+      ))}
+    </div>
   )
 }
 
