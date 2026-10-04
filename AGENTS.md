@@ -33,6 +33,8 @@ Prefix Python commands with `uv run` (no manual venv activation needed).
 Frontend, from `frontend/` (Node version in `.nvmrc`, run `nvm use`):
 - `npm run dev` — Vite on :5173, proxies `/api` to the API on :8000
 - `npm test` / `npm run lint` — Vitest / oxlint
+- `npm run e2e` — Playwright tests in `e2e/` (`/api` is mocked per test). Run
+  `npm run e2e:install` once; browsers go in `node_modules`, not `~/Library`.
 - `npm run build` — type-check and build `dist/`, which `uv run fastapi run`
   serves on :8000
 - `npm run gen:api` — regenerate `openapi.json` and `src/api/schema.d.ts`
