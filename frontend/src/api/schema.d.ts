@@ -124,6 +124,112 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/category-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Groups
+         * @description The whole tree, in order, hidden rows included.
+         */
+        get: operations["get_groups_api_category_groups_get"];
+        put?: never;
+        /** Create Group */
+        post: operations["create_group_api_category_groups_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/category-groups/{group_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Group */
+        patch: operations["update_group_api_category_groups__group_id__patch"];
+        trace?: never;
+    };
+    "/api/category-groups/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Reorder Groups */
+        put: operations["reorder_groups_api_category_groups_order_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/category-groups/{group_id}/categories/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Reorder Categories */
+        put: operations["reorder_categories_api_category_groups__group_id__categories_order_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Category */
+        post: operations["create_category_api_categories_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/categories/{category_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Category */
+        patch: operations["update_category_api_categories__category_id__patch"];
+        trace?: never;
+    };
     "/api/transactions": {
         parameters: {
             query?: never;
@@ -188,11 +294,8 @@ export interface components {
             country_code: string;
             /** Bank Name */
             bank_name: string;
-            /**
-             * Expires At
-             * Format: date-time
-             */
-            expires_at: string;
+            /** Expires At */
+            expires_at: string | null;
             /**
              * Consent Status
              * @enum {string}
@@ -200,6 +303,52 @@ export interface components {
             consent_status: "ok" | "expiring" | "expired";
             /** Account Ids */
             account_ids: number[];
+        };
+        /**
+         * CategoryGroupOut
+         * @description A group with its categories, both already in order. Hidden rows are
+         *     included; the page decides whether to show them.
+         */
+        CategoryGroupOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Is Income */
+            is_income: boolean;
+            /** Hidden */
+            hidden: boolean;
+            /** Sort Order */
+            sort_order: number;
+            /** Categories */
+            categories: components["schemas"]["CategoryOut"][];
+        };
+        /** CategoryIn */
+        CategoryIn: {
+            /** Group Id */
+            group_id: number;
+            /** Name */
+            name: string;
+        };
+        /** CategoryOut */
+        CategoryOut: {
+            /** Id */
+            id: number;
+            /** Group Id */
+            group_id: number;
+            /** Name */
+            name: string;
+            /** Hidden */
+            hidden: boolean;
+            /** Sort Order */
+            sort_order: number;
+        };
+        /** CategoryPatch */
+        CategoryPatch: {
+            /** Name */
+            name?: string | null;
+            /** Hidden */
+            hidden?: boolean | null;
         };
         /** CompleteLinkIn */
         CompleteLinkIn: {
@@ -214,6 +363,28 @@ export interface components {
             name: string;
             /** Flag */
             flag?: string | null;
+        };
+        /** GroupIn */
+        GroupIn: {
+            /** Name */
+            name: string;
+            /**
+             * Is Income
+             * @default false
+             */
+            is_income: boolean;
+        };
+        /**
+         * GroupPatch
+         * @description Only the fields sent are changed.
+         */
+        GroupPatch: {
+            /** Name */
+            name?: string | null;
+            /** Hidden */
+            hidden?: boolean | null;
+            /** Is Income */
+            is_income?: boolean | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -264,6 +435,14 @@ export interface components {
             amount: number;
             /** Currency */
             currency: string;
+        };
+        /**
+         * OrderIn
+         * @description The ids in their new order, complete and without repeats.
+         */
+        OrderIn: {
+            /** Ids */
+            ids: number[];
         };
         /**
          * PendingTransactionOut
@@ -557,6 +736,226 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SyncResultOut"][];
+                };
+            };
+        };
+    };
+    get_groups_api_category_groups_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryGroupOut"][];
+                };
+            };
+        };
+    };
+    create_group_api_category_groups_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroupIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryGroupOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_group_api_category_groups__group_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroupPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryGroupOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reorder_groups_api_category_groups_order_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reorder_categories_api_category_groups__group_id__categories_order_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                group_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_category_api_categories_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_category_api_categories__category_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                category_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoryPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
