@@ -6,6 +6,8 @@ from fastapi.responses import FileResponse, JSONResponse
 from app.accounts import routes as accounts
 from app.bank import routes as bank
 from app.bank.errors import BankAPIError, LinkError, LinkNotFoundError
+from app.categories import routes as categories
+from app.categories.errors import CategoryError, CategoryNotFoundError
 from app.config import FRONTEND_DIST
 from app.transactions import routes as transactions
 
@@ -15,6 +17,8 @@ ERROR_STATUS = {
     LinkError: 400,
     LinkNotFoundError: 404,
     BankAPIError: 502,  # The bank failed, not us.
+    CategoryError: 400,
+    CategoryNotFoundError: 404,
 }
 
 
@@ -50,6 +54,8 @@ app = FastAPI(title="Budget App", redirect_slashes=False)
 add_error_handlers(app)
 app.include_router(accounts.router)
 app.include_router(bank.router)
+app.include_router(categories.groups_router)
+app.include_router(categories.categories_router)
 app.include_router(transactions.router)
 
 if FRONTEND_DIST.exists():

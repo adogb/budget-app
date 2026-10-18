@@ -11,6 +11,11 @@ from sqlalchemy.orm import Session, selectinload
 from app.categories.errors import CategoryError, CategoryNotFoundError
 from app.models import Category, CategoryGroup
 
+# Also the column width. Checked here rather than in the Pydantic schemas so
+# that every refusal is a 400 with a readable `detail`: FastAPI answers its own
+# validation errors with a 422 whose `detail` is a list the page can't show.
+NAME_MAX_LENGTH = 80
+
 
 def list_groups(db: Session) -> list[CategoryGroup]:
     """Every group in order, each with its categories in order.
@@ -41,6 +46,7 @@ def get_category(db: Session, category_id: int) -> Category:
 
 
 def create_group(db: Session, name: str, is_income: bool = False) -> CategoryGroup:
+    name = _clean_name(name)
     _check_group_name(db, name)
     if is_income:
         _check_income_group_is_free(db, group_id=None)
@@ -63,7 +69,7 @@ def update_group(
     """Only the fields given change. Everything is checked before anything is
     written, so a refused change leaves the row as it was."""
     group = get_group(db, group_id)
-    new_name = group.name if name is None else name
+    new_name = group.name if name is None else _clean_name(name)
     new_is_income = group.is_income if is_income is None else is_income
     new_hidden = group.hidden if hidden is None else hidden
 
@@ -82,6 +88,7 @@ def update_group(
 
 
 def create_category(db: Session, group_id: int, name: str) -> Category:
+    name = _clean_name(name)
     get_group(db, group_id)
     _check_category_name(db, group_id, name)
     category = Category(
@@ -100,7 +107,7 @@ def update_category(
     hidden: bool | None = None,
 ) -> Category:
     category = get_category(db, category_id)
-    new_name = category.name if name is None else name
+    new_name = category.name if name is None else _clean_name(name)
 
     if new_name != category.name:
         _check_category_name(db, category.group_id, new_name)
@@ -143,6 +150,18 @@ def reorder_categories(db: Session, group_id: int, ids: list[int]) -> None:
     for position, category_id in enumerate(ids):
         categories[category_id].sort_order = position
     db.commit()
+
+
+def _clean_name(name: str) -> str:
+    """Trim, then check. The empty or too-long name is refused here rather than
+    in the Pydantic schema, so the API answers 400 with a message the page can
+    show."""
+    cleaned = name.strip()
+    if not cleaned:
+        raise CategoryError("A name is required.")
+    if len(cleaned) > NAME_MAX_LENGTH:
+        raise CategoryError(f"A name can be at most {NAME_MAX_LENGTH} characters.")
+    return cleaned
 
 
 def _check_group_name(db: Session, name: str) -> None:
