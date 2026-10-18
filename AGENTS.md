@@ -29,6 +29,8 @@ Prefix Python commands with `uv run` (no manual venv activation needed).
 - `uv run alembic revision --autogenerate -m "..."` then
   `uv run alembic upgrade head` — migrate. The schema is only ever created by
   Alembic.
+- `uv run python -m scripts.seed_categories` — load the starter category tree
+  into an empty database (`--replace` clears the tree first).
 
 Frontend, from `frontend/` (Node version in `.nvmrc`, run `nvm use`):
 - `npm run dev` — Vite on :5173, proxies `/api` to the API on :8000

@@ -1,0 +1,141 @@
+[
+  {
+    "name": "Income",
+    "is_income": true,
+    "categories": [
+      "Salary",
+      "Investment income",
+      "Interest received (excl. loans)",
+      "Social security, unemployment benefits",
+      "Other income",
+      "Unknown income"
+    ]
+  },
+  {
+    "name": "Food and drinks",
+    "categories": [
+      "Groceries",
+      "Cafes, restaurants, bars",
+      "Snacks, bakery, food on the go",
+      "Take away",
+      "Other food and drinks"
+    ]
+  },
+  {
+    "name": "Transportation",
+    "categories": [
+      "Public transport",
+      "Taxi and ride sharing services",
+      "Bike expenses",
+      "Parking, fuel, toll, other expenses"
+    ]
+  },
+  {
+    "name": "Travel",
+    "categories": [
+      "Flights",
+      "Accomodation",
+      "Car rental and transportation",
+      "Activities",
+      "Food and drinks",
+      "Other travel"
+    ]
+  },
+  {
+    "name": "Loans",
+    "categories": [
+      "Realkredit loan",
+      "Bank loan",
+      "Consumer loans",
+      "Car leasing",
+      "Overdraft",
+      "Other loans"
+    ]
+  },
+  {
+    "name": "Savings and investments",
+    "categories": [
+      "Pension investments",
+      "Liquid investments",
+      "Emergency savings",
+      "Holiday savings",
+      "Other savings",
+      "Other investments"
+    ]
+  },
+  {
+    "name": "Administration",
+    "categories": [
+      "Tax payment or return",
+      "Fines",
+      "Bank fees"
+    ]
+  },
+  {
+    "name": "Nonprofit Organisations",
+    "categories": [
+      "Charity, non-profit",
+      "Association membership fees"
+    ]
+  },
+  {
+    "name": "Home, bills and utilities",
+    "categories": [
+      "Ejerudgift",
+      "Electricity",
+      "Phone & internet",
+      "TV services",
+      "Indboforsikring",
+      "Property tax",
+      "Home improvements",
+      "Other home and utilities"
+    ]
+  },
+  {
+    "name": "Personal and Healthcare",
+    "categories": [
+      "Beauty, cosmetics, hairdresser",
+      "Fitness and health"
+    ]
+  },
+  {
+    "name": "Entertainment, IT and learning",
+    "categories": [
+      "Hobbies (sewing, books, games)",
+      "Events, museums, concerts, cinema",
+      "Education, courses, newsletters",
+      "Online services, software",
+      "Other entertainment"
+    ]
+  },
+  {
+    "name": "Medical and safety",
+    "categories": [
+      "Insurance (life, travel, health)",
+      "Pharmacy",
+      "Doctors",
+      "Dentist",
+      "Mental health",
+      "Union & unemployment insurance",
+      "Glasses and contacts"
+    ]
+  },
+  {
+    "name": "Shopping",
+    "categories": [
+      "Clothing, shoes, accessories",
+      "Furniture, decoration, plants, utensils",
+      "Gifts",
+      "Electronics",
+      "Other shopping"
+    ]
+  },
+  {
+    "name": "Other",
+    "categories": [
+      "Cash withdrawal / deposit",
+      "Other expense",
+      "Unknown expense"
+    ]
+  }
+]
