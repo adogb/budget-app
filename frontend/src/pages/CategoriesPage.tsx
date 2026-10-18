@@ -193,7 +193,10 @@ function GroupCard({
     : group.categories.filter((category) => !category.hidden)
 
   return (
-    <div className="rounded border border-gray-200 bg-white">
+    <section
+      aria-label={group.name}
+      className="rounded border border-gray-200 bg-white"
+    >
       <div className="flex items-center gap-3 border-b border-gray-200 px-3 py-2">
         <EditableName
           value={group.name}
@@ -243,7 +246,7 @@ function GroupCard({
           onAdd={(name) => actions.addCategory(group.id, name)}
         />
       </div>
-    </div>
+    </section>
   )
 }
 
