@@ -1,6 +1,10 @@
 // fetch() only rejects on network failure, so an HTTP error like 500 has to
 // be turned into an exception here. TanStack Query then shows it as an error.
-async function request<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
+async function request<T>(
+  method: 'GET' | 'POST' | 'PATCH' | 'PUT',
+  path: string,
+  body?: unknown,
+): Promise<T> {
   const response = await fetch(path, {
     method,
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
@@ -34,4 +38,12 @@ export function getJson<T>(path: string): Promise<T> {
 
 export function postJson<T>(path: string, body?: unknown): Promise<T> {
   return request<T>('POST', path, body)
+}
+
+export function patchJson<T>(path: string, body: unknown): Promise<T> {
+  return request<T>('PATCH', path, body)
+}
+
+export function putJson<T>(path: string, body: unknown): Promise<T> {
+  return request<T>('PUT', path, body)
 }

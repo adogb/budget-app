@@ -1,5 +1,6 @@
 import { Navigate, NavLink, Route, Routes } from 'react-router'
 import AccountsPage from './pages/AccountsPage.tsx'
+import CategoriesPage from './pages/CategoriesPage.tsx'
 import LinkBankPage from './pages/LinkBankPage.tsx'
 import LinkCallbackPage from './pages/LinkCallbackPage.tsx'
 import TransactionsPage from './pages/TransactionsPage.tsx'
@@ -12,6 +13,7 @@ export default function App() {
           <span className="text-lg font-semibold">Budget</span>
           <nav className="flex gap-6">
             <NavItem to="/transactions">Transactions</NavItem>
+            <NavItem to="/categories">Categories</NavItem>
             <NavItem to="/accounts">Accounts</NavItem>
           </nav>
         </div>
@@ -21,6 +23,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/transactions" replace />} />
           <Route path="/transactions" element={<TransactionsPage />} />
+          <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/accounts" element={<AccountsPage />} />
           <Route path="/link" element={<LinkBankPage />} />
           <Route path="/link/callback" element={<LinkCallbackPage />} />
