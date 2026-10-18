@@ -177,10 +177,15 @@ Services take a session and return models, as in `accounts/` and
 
 Validation split:
 
-- **Pydantic:** type, `str` length 1–80, `strip_whitespace` (so `"  "` is 400
-  before the service sees it).
-- **Service:** uniqueness (C4) and the income rules (C3), because they need the
-  database. They raise `CategoryError` with the message I want to read.
+- **Pydantic:** the types only.
+- **Service:** the name rules (trimmed, non-empty, at most 80 characters),
+  uniqueness (C4) and the income rules (C3). They raise `CategoryError`, which
+  `main.py` turns into a 400 carrying the message I want to read.
+
+  The name rules live in the service rather than in Pydantic: a schema-level
+  failure is FastAPI's own 422, whose `detail` is a list of error objects, and
+  `client.ts` can only show a string. Keeping every refusal a 400 with a string
+  `detail` means the page shows all of them the same way.
 
 `reorder_*` treats the sent list as the whole truth: unknown ids, missing ids,
 or a category from another group is a 400 and nothing is written.
