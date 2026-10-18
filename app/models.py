@@ -137,3 +137,41 @@ class PendingTransaction(Base):
     payee: Mapped[str | None] = mapped_column(String(255))
     booking_date: Mapped[date | None] = mapped_column(Date)
     value_date: Mapped[date | None] = mapped_column(Date)
+
+
+class CategoryGroup(Base):
+    """A folder of categories, e.g. "Housing" (spec §1).
+
+    Exactly one group has `is_income` set; its categories are where income
+    lands. Hidden groups and categories stay in the tree so that anything
+    already pointing at them keeps working.
+    """
+
+    __tablename__ = "category_groups"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(80), unique=True)
+    is_income: Mapped[bool] = mapped_column(default=False)
+    hidden: Mapped[bool] = mapped_column(default=False)
+    sort_order: Mapped[int] = mapped_column(default=0)
+
+    # Ordered by sort_order, with id breaking ties so the tree can't shuffle
+    # between two requests.
+    categories: Mapped[list[Category]] = relationship(
+        back_populates="group", order_by="Category.sort_order, Category.id"
+    )
+
+
+class Category(Base):
+    """One envelope. Always inside a group (spec §1)."""
+
+    __tablename__ = "categories"
+    __table_args__ = (UniqueConstraint("group_id", "name"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    group_id: Mapped[int] = mapped_column(ForeignKey("category_groups.id"))
+    name: Mapped[str] = mapped_column(String(80))
+    hidden: Mapped[bool] = mapped_column(default=False)
+    sort_order: Mapped[int] = mapped_column(default=0)
+
+    group: Mapped[CategoryGroup] = relationship(back_populates="categories")
